@@ -1,9 +1,11 @@
 <div align="center">
 
-# 🧭 Personal Travel Agent
+<img src="static/logo.png" alt="Personal Travel Agent Logo" width="78" style="border-radius: 18px;" />
+
+# Personal Travel Agent
 
 **Minimalist conversational AI agent for live rail tickets, flights, global hotels, and itinerary planning.**  
-*Zero mock data · Zero pip dependencies · Pure chat UI with inline widgets*
+*Zero mock data · Dribbble-grade Warm Canyon UI · GSAP 3 + Lucide Icons*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB.svg)](https://www.python.org/)
@@ -25,6 +27,10 @@
 - **💬 Pure Chat UI (`static/index.html`)** — Single-column chat interface that renders interactive ticket, flight, hotel, timetable, and itinerary widgets inline.
 
 ## 📸 Preview
+
+| Dribbble-Inspired Conversational Home | Live 12306 Rail + DeepSeek Summary |
+| :---: | :---: |
+| ![Home UI](ui_dribbble_home.png) | ![Live Rail Cards](ui_dribbble_live_test.png) |
 
 | Door-to-Door Flight/Rail + Hotel + Itinerary | Landmark & Airport Hotel Search (e.g., Hanoi Airport) |
 | :---: | :---: |

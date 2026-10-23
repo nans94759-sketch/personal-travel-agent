@@ -1,9 +1,11 @@
 <div align="center">
 
-# 🧭 Personal Travel Agent (个人行程安排智能体)
+<img src="static/logo.png" alt="远行客 AI Logo" width="78" style="border-radius: 18px;" />
+
+# Personal Travel Agent (远行客 AI)
 
 **极简纯对话式 AI 出行智能体：实时查询 12306 高铁余票、民航低价机票、全球酒店房价与定制行程。**  
-*100% 真实实时数据 · 零第三方 pip 依赖 · 对话流内嵌交互卡片*
+*100% 真实实时数据 · Dribbble 暖光峡谷视觉体系 · GSAP 3 + Lucide 图标*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB.svg)](https://www.python.org/)
@@ -25,6 +27,10 @@
 - **💬 极简纯对话 UI (`static/index.html`)** — 告别繁琐表单，单栏对话流内按需嵌入车次、航班、酒店、经停表与定制行程单卡片。
 
 ## 📸 界面预览
+
+| Dribbble 风格对话首屏 (Bento + 黑曜石输入坞) | 12306 实时车次卡片 + DeepSeek 决策总结 |
+| :---: | :---: |
+| ![首屏预览](ui_dribbble_home.png) | ![12306实时卡片预览](ui_dribbble_live_test.png) |
 
 | 空铁门到门比价 + 酒店 + 行程规划 | 国际/国内地标周边酒店查询（如：河内机场旁） |
 | :---: | :---: |
