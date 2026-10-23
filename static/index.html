@@ -2871,22 +2871,59 @@
       const tFilter = st.trainTimeFilter || 'all';
       const rawCustom = st.customTimeRange || (st.intent && st.intent.time_range);
       const customTr = (rawCustom && rawCustom.key === 'custom') ? rawCustom : null;
+      const sortMode = st.trainSort || 'default';
+      const arrBefore = st.trainArrBefore || null;
+      const seatPref = st.trainSeatPref || null;
+      const maxPrice = st.trainMaxPrice || null;
+      const stationKw = st.trainStationKw || null;
 
       const cntMorning = st.trains.filter(t => matchTimeSlot(t.dep_time, 'morning')).length;
       const cntAfternoon = st.trains.filter(t => matchTimeSlot(t.dep_time, 'afternoon')).length;
       const cntEvening = st.trains.filter(t => matchTimeSlot(t.dep_time, 'evening')).length;
       const cntCustom = customTr ? st.trains.filter(t => matchTimeSlot(t.dep_time, 'custom', customTr)).length : 0;
+      const cntNormal = st.trains.filter(t => !/^[GDC]/.test(t.train_code)).length;
 
       let list = st.trains.slice();
       if (st.trainFilter === 'hsr') {
         list = list.filter(t => /^[GDC]/.test(t.train_code));
+      } else if (st.trainFilter === 'normal') {
+        list = list.filter(t => !/^[GDC]/.test(t.train_code));
       } else if (st.trainFilter === 'avail') {
+        list = list.filter(t => t.can_buy);
+      }
+      if (st.trainOnlyAvail) {
         list = list.filter(t => t.can_buy);
       }
       if (tFilter && tFilter !== 'all') {
         list = list.filter(t => matchTimeSlot(t.dep_time, tFilter, customTr));
       }
+      if (arrBefore && arrBefore.time) {
+        list = list.filter(t => (t.day_diff || 0) === 0 && (t.arr_time || '99:99') <= arrBefore.time);
+      }
+      if (seatPref) {
+        list = list.filter(t => (t.seats || []).some(s => {
+          const matchSeat = seatPref === '卧铺' ? /卧/.test(s.name) : s.name.includes(seatPref);
+          return matchSeat && s.bookable;
+        }));
+      }
+      if (maxPrice && maxPrice > 0) {
+        list = list.filter(t => t.lowest_price && t.lowest_price <= maxPrice);
+      }
+      if (stationKw) {
+        list = list.filter(t => (t.from_station || '').includes(stationKw) || (t.to_station || '').includes(stationKw));
+      }
 
+      if (sortMode === 'fastest') {
+        list.sort((a, b) => (a.duration_minutes || 9999) - (b.duration_minutes || 9999));
+      } else if (sortMode === 'cheapest') {
+        list.sort((a, b) => (a.lowest_price || 99999) - (b.lowest_price || 99999));
+      } else if (sortMode === 'earliest') {
+        list.sort((a, b) => String(a.dep_time || '').localeCompare(String(b.dep_time || '')));
+      } else if (sortMode === 'latest') {
+        list.sort((a, b) => String(b.dep_time || '').localeCompare(String(a.dep_time || '')));
+      }
+
+      const isAllDefault = st.trainFilter === 'all' && !st.trainOnlyAvail && tFilter === 'all' && sortMode === 'default' && !arrBefore && !seatPref && !maxPrice && !stationKw;
       const visibleList = st.expandTrains ? list : list.slice(0, 5);
       const rowsHtml = visibleList.map((t, idx) => {
         const isHsr = /^[GDC]/.test(t.train_code);
@@ -2925,6 +2962,11 @@
         </button>
       ` : '';
 
+      const intentArrBefore = st.intent && st.intent.arrive_before;
+      const intentSeatPref = st.intent && st.intent.seat_pref;
+      const intentMaxPrice = st.intent && st.intent.max_price;
+      const intentStationKw = st.intent && st.intent.station_keyword;
+
       return `
         <div class="inline-widget">
           <div class="widget-header">
@@ -2933,22 +2975,53 @@
               <span>${st.intent.from_city} → ${st.intent.to_city} · 火车票 (${st.intent.date})</span>
             </div>
             <div class="widget-filters">
-              <button class="filter-pill ${st.trainFilter === 'all' && tFilter === 'all' ? 'active' : ''}" onclick="setTrainFilter(${turnId}, 'all', 'all')">全部 (${st.trains.length})</button>
+              <button class="filter-pill ${isAllDefault ? 'active' : ''}" onclick="resetTrainFilters(${turnId})">全部 (${st.trains.length})</button>
               ${cntMorning > 0 || tFilter === 'morning' ? `<button class="filter-pill ${tFilter === 'morning' ? 'active' : ''}" onclick="setTrainTimeFilter(${turnId}, '${tFilter === 'morning' ? 'all' : 'morning'}')">上午 (${cntMorning})</button>` : ''}
               ${tFilter === 'noon' ? `<button class="filter-pill active" onclick="setTrainTimeFilter(${turnId}, 'all')">中午 11-14点</button>` : ''}
               ${cntAfternoon > 0 || tFilter === 'afternoon' ? `<button class="filter-pill ${tFilter === 'afternoon' ? 'active' : ''}" onclick="setTrainTimeFilter(${turnId}, '${tFilter === 'afternoon' ? 'all' : 'afternoon'}')">下午 (${cntAfternoon})</button>` : ''}
               ${cntEvening > 0 || tFilter === 'evening' ? `<button class="filter-pill ${tFilter === 'evening' ? 'active' : ''}" onclick="setTrainTimeFilter(${turnId}, '${tFilter === 'evening' ? 'all' : 'evening'}')">晚上 (${cntEvening})</button>` : ''}
               ${customTr ? `<button class="filter-pill ${tFilter === 'custom' ? 'active' : ''}" onclick="setTrainTimeFilter(${turnId}, '${tFilter === 'custom' ? 'all' : 'custom'}')">${customTr.label} (${cntCustom})</button>` : ''}
+              ${intentArrBefore ? `<button class="filter-pill ${arrBefore ? 'active' : ''}" onclick="toggleTrainExtraFilter(${turnId}, 'arrBefore')">${intentArrBefore.label}</button>` : ''}
+              <span class="filter-divider"></span>
+              <button class="filter-pill ${sortMode === 'fastest' ? 'active' : ''}" onclick="setTrainSort(${turnId}, '${sortMode === 'fastest' ? 'default' : 'fastest'}')">最快优先</button>
+              <button class="filter-pill ${sortMode === 'cheapest' ? 'active' : ''}" onclick="setTrainSort(${turnId}, '${sortMode === 'cheapest' ? 'default' : 'cheapest'}')">低价优先</button>
+              ${sortMode === 'latest' ? `<button class="filter-pill active" onclick="setTrainSort(${turnId}, 'default')">最晚出发</button>` : ''}
               <span class="filter-divider"></span>
               <button class="filter-pill ${st.trainFilter === 'hsr' ? 'active' : ''}" onclick="setTrainFilter(${turnId}, '${st.trainFilter === 'hsr' ? 'all' : 'hsr'}')">只看高铁</button>
-              <button class="filter-pill ${st.trainFilter === 'avail' ? 'active' : ''}" onclick="setTrainFilter(${turnId}, '${st.trainFilter === 'avail' ? 'all' : 'avail'}')">只看有票</button>
+              ${cntNormal > 0 || st.trainFilter === 'normal' ? `<button class="filter-pill ${st.trainFilter === 'normal' ? 'active' : ''}" onclick="setTrainFilter(${turnId}, '${st.trainFilter === 'normal' ? 'all' : 'normal'}')">普速/过夜 (${cntNormal})</button>` : ''}
+              <button class="filter-pill ${st.trainFilter === 'avail' || st.trainOnlyAvail ? 'active' : ''}" onclick="toggleTrainAvail(${turnId})">只看有票</button>
+              ${intentSeatPref ? `<button class="filter-pill ${seatPref ? 'active' : ''}" onclick="toggleTrainExtraFilter(${turnId}, 'seatPref')">${intentSeatPref}有票</button>` : ''}
+              ${intentMaxPrice ? `<button class="filter-pill ${maxPrice ? 'active' : ''}" onclick="toggleTrainExtraFilter(${turnId}, 'maxPrice')">≤¥${intentMaxPrice}</button>` : ''}
+              ${intentStationKw ? `<button class="filter-pill ${stationKw ? 'active' : ''}" onclick="toggleTrainExtraFilter(${turnId}, 'stationKw')">仅看${intentStationKw}</button>` : ''}
               ${(!st.transfers || !st.transfers.length) ? `<button class="filter-pill" onclick="loadSmartTransfers(${turnId})"><i data-lucide="git-branch" style="width:11px;height:11px;"></i> 智能中转</button>` : ''}
             </div>
           </div>
-          <div class="w-train-list">${rowsHtml || '<div style="padding:14px;font-size:12.5px;color:var(--text-muted);">当前时段暂无符合筛选条件的车次，可点击上方「全部」查看全天班次</div>'}</div>
+          <div class="w-train-list">${rowsHtml || `<div style="padding:16px;text-align:center;font-size:12.5px;color:var(--text-muted);">当前筛选条件下暂无匹配车次 · <a href="javascript:void(0)" style="color:var(--accent);font-weight:600;text-decoration:none;" onclick="resetTrainFilters(${turnId})">重置并查看全部 ${st.trains.length} 趟车次</a></div>`}</div>
           ${moreBtn}
         </div>
       `;
+    }
+
+    function rerenderTrainCard(turnId) {
+      const el = document.getElementById(`train-widget-${turnId}`);
+      if (el) {
+        el.innerHTML = buildTrainWidgetHtml(turnId);
+        refreshIcons();
+      }
+    }
+
+    function resetTrainFilters(turnId) {
+      const st = turnStore[turnId];
+      if (!st) return;
+      st.trainFilter = 'all';
+      st.trainOnlyAvail = false;
+      st.trainTimeFilter = 'all';
+      st.trainSort = 'default';
+      st.trainArrBefore = null;
+      st.trainSeatPref = null;
+      st.trainMaxPrice = null;
+      st.trainStationKw = null;
+      rerenderTrainCard(turnId);
     }
 
     function setTrainFilter(turnId, filter, timeOverride) {
@@ -2957,21 +3030,46 @@
       if (timeOverride) {
         turnStore[turnId].trainTimeFilter = timeOverride;
       }
-      const el = document.getElementById(`train-widget-${turnId}`);
-      if (el) {
-        el.innerHTML = buildTrainWidgetHtml(turnId);
-        refreshIcons();
+      rerenderTrainCard(turnId);
+    }
+
+    function toggleTrainAvail(turnId) {
+      const st = turnStore[turnId];
+      if (!st) return;
+      if (st.trainFilter === 'avail') {
+        st.trainFilter = 'all';
+        st.trainOnlyAvail = false;
+      } else {
+        st.trainOnlyAvail = !st.trainOnlyAvail;
       }
+      rerenderTrainCard(turnId);
     }
 
     function setTrainTimeFilter(turnId, timeKey) {
       if (!turnStore[turnId]) return;
       turnStore[turnId].trainTimeFilter = timeKey;
-      const el = document.getElementById(`train-widget-${turnId}`);
-      if (el) {
-        el.innerHTML = buildTrainWidgetHtml(turnId);
-        refreshIcons();
+      rerenderTrainCard(turnId);
+    }
+
+    function setTrainSort(turnId, sortKey) {
+      if (!turnStore[turnId]) return;
+      turnStore[turnId].trainSort = sortKey;
+      rerenderTrainCard(turnId);
+    }
+
+    function toggleTrainExtraFilter(turnId, field) {
+      const st = turnStore[turnId];
+      if (!st || !st.intent) return;
+      if (field === 'arrBefore') {
+        st.trainArrBefore = st.trainArrBefore ? null : st.intent.arrive_before;
+      } else if (field === 'seatPref') {
+        st.trainSeatPref = st.trainSeatPref ? null : st.intent.seat_pref;
+      } else if (field === 'maxPrice') {
+        st.trainMaxPrice = st.trainMaxPrice ? null : st.intent.max_price;
+      } else if (field === 'stationKw') {
+        st.trainStationKw = st.trainStationKw ? null : st.intent.station_keyword;
       }
+      rerenderTrainCard(turnId);
     }
 
     function toggleExpandTrains(turnId) {
@@ -3041,6 +3139,10 @@
       const showTrBtn = st && (!st.transfers || !st.transfers.length);
       const timeFilter = (st && st.flightTimeFilter) || 'all';
       const customRange = (st && st.customTimeRange) || (intent && intent.time_range);
+      const sortMode = (st && st.flightSort) || 'default';
+      const arrBefore = (st && st.flightArrBefore) || null;
+      const maxPrice = (st && st.flightMaxPrice) || null;
+      const stationKw = (st && st.flightStationKw) || null;
       const isIntlCal = flights[0] && flights[0].is_international_calendar;
       const maxRows = isIntlCal ? 3 : 6;
       const essTz = st && st.essentials && typeof st.essentials.tz_offset === 'number' ? st.essentials.tz_offset : 8;
@@ -3049,11 +3151,33 @@
       const countAfternoon = flights.filter(f => matchTimeSlot(f.dep_time, 'afternoon')).length;
       const countEvening = flights.filter(f => matchTimeSlot(f.dep_time, 'evening')).length;
 
-      let filteredFlights = flights;
+      let filteredFlights = flights.slice();
       if (!isIntlCal && timeFilter && timeFilter !== 'all') {
-        filteredFlights = flights.filter(f => matchTimeSlot(f.dep_time, timeFilter, customRange));
+        filteredFlights = filteredFlights.filter(f => matchTimeSlot(f.dep_time, timeFilter, customRange));
+      }
+      if (!isIntlCal && arrBefore && arrBefore.time) {
+        filteredFlights = filteredFlights.filter(f => (f.arr_time_local || f.arr_time || '99:99') <= arrBefore.time);
+      }
+      if (maxPrice && maxPrice > 0) {
+        filteredFlights = filteredFlights.filter(f => f.lowest_price && f.lowest_price <= maxPrice);
+      }
+      if (stationKw) {
+        filteredFlights = filteredFlights.filter(f =>
+          (f.dep_airport_short || '').includes(stationKw) || (f.arr_airport_short || '').includes(stationKw)
+        );
       }
 
+      if (sortMode === 'fastest') {
+        filteredFlights.sort((a, b) => (a.duration_minutes || 9999) - (b.duration_minutes || 9999));
+      } else if (sortMode === 'cheapest') {
+        filteredFlights.sort((a, b) => (a.lowest_price || 99999) - (b.lowest_price || 99999));
+      } else if (sortMode === 'earliest') {
+        filteredFlights.sort((a, b) => String(a.dep_time || '').localeCompare(String(b.dep_time || '')));
+      } else if (sortMode === 'latest') {
+        filteredFlights.sort((a, b) => String(b.dep_time || '').localeCompare(String(a.dep_time || '')));
+      }
+
+      const isAllDefault = timeFilter === 'all' && sortMode === 'default' && !arrBefore && !maxPrice && !stationKw;
       const rows = filteredFlights.slice(0, maxRows).map(f => {
         const arrTz = typeof f.arr_tz_offset === 'number' ? f.arr_tz_offset : essTz;
         const timeComp = renderArrivalTimeComp(
@@ -3097,20 +3221,29 @@
       }).join('');
 
       const hasCustomRange = customRange && customRange.key === 'custom';
+      const intentArrBefore = intent && intent.arrive_before;
+      const intentMaxPrice = intent && intent.max_price;
+      const intentStationKw = intent && intent.station_keyword;
       const timeFiltersHtml = !isIntlCal ? `
         <div class="widget-filters">
-          <button class="filter-pill ${timeFilter === 'all' ? 'active' : ''}" onclick="setFlightTimeFilter(${turnId}, 'all')">全部 (${flights.length})</button>
-          <button class="filter-pill ${timeFilter === 'morning' ? 'active' : ''}" onclick="setFlightTimeFilter(${turnId}, 'morning')">上午 (${countMorning})</button>
-          <button class="filter-pill ${timeFilter === 'afternoon' ? 'active' : ''}" onclick="setFlightTimeFilter(${turnId}, 'afternoon')">下午 (${countAfternoon})</button>
-          <button class="filter-pill ${timeFilter === 'evening' ? 'active' : ''}" onclick="setFlightTimeFilter(${turnId}, 'evening')">晚上 (${countEvening})</button>
-          ${hasCustomRange ? `<button class="filter-pill ${timeFilter === 'custom' ? 'active' : ''}" onclick="setFlightTimeFilter(${turnId}, 'custom')">${customRange.label}</button>` : ''}
+          <button class="filter-pill ${isAllDefault ? 'active' : ''}" onclick="resetFlightFilters(${turnId})">全部 (${flights.length})</button>
+          <button class="filter-pill ${timeFilter === 'morning' ? 'active' : ''}" onclick="setFlightTimeFilter(${turnId}, '${timeFilter === 'morning' ? 'all' : 'morning'}')">上午 (${countMorning})</button>
+          <button class="filter-pill ${timeFilter === 'afternoon' ? 'active' : ''}" onclick="setFlightTimeFilter(${turnId}, '${timeFilter === 'afternoon' ? 'all' : 'afternoon'}')">下午 (${countAfternoon})</button>
+          <button class="filter-pill ${timeFilter === 'evening' ? 'active' : ''}" onclick="setFlightTimeFilter(${turnId}, '${timeFilter === 'evening' ? 'all' : 'evening'}')">晚上 (${countEvening})</button>
+          ${hasCustomRange ? `<button class="filter-pill ${timeFilter === 'custom' ? 'active' : ''}" onclick="setFlightTimeFilter(${turnId}, '${timeFilter === 'custom' ? 'all' : 'custom'}')">${customRange.label}</button>` : ''}
+          ${intentArrBefore ? `<button class="filter-pill ${arrBefore ? 'active' : ''}" onclick="toggleFlightExtraFilter(${turnId}, 'arrBefore')">${intentArrBefore.label}</button>` : ''}
+          <span class="filter-divider"></span>
+          <button class="filter-pill ${sortMode === 'fastest' ? 'active' : ''}" onclick="setFlightSort(${turnId}, '${sortMode === 'fastest' ? 'default' : 'fastest'}')">最快优先</button>
+          <button class="filter-pill ${sortMode === 'cheapest' ? 'active' : ''}" onclick="setFlightSort(${turnId}, '${sortMode === 'cheapest' ? 'default' : 'cheapest'}')">低价优先</button>
+          ${intentMaxPrice ? `<button class="filter-pill ${maxPrice ? 'active' : ''}" onclick="toggleFlightExtraFilter(${turnId}, 'maxPrice')">≤¥${intentMaxPrice}</button>` : ''}
+          ${intentStationKw ? `<button class="filter-pill ${stationKw ? 'active' : ''}" onclick="toggleFlightExtraFilter(${turnId}, 'stationKw')">仅看${intentStationKw}</button>` : ''}
           ${showTrBtn ? `<span class="filter-divider"></span><button class="filter-pill" onclick="loadSmartTransfers(${turnId})"><i data-lucide="git-branch" style="width:11px;height:11px;"></i> 智能中转 / 空铁联运</button>` : ''}
         </div>
       ` : (showTrBtn ? `<button class="filter-pill" onclick="loadSmartTransfers(${turnId})"><i data-lucide="git-branch" style="width:11px;height:11px;"></i> 智能中转 / 空铁联运</button>` : '');
 
       const emptyFlightHtml = !filteredFlights.length ? `
         <div style="padding:18px;text-align:center;font-size:12.5px;color:var(--text-muted);">
-          当前时段暂无直飞航班 · <a href="javascript:void(0)" style="color:var(--accent);font-weight:600;text-decoration:none;" onclick="setFlightTimeFilter(${turnId}, 'all')">查看全天全部 ${flights.length} 趟航班</a>
+          当前筛选条件下暂无匹配直飞航班 · <a href="javascript:void(0)" style="color:var(--accent);font-weight:600;text-decoration:none;" onclick="resetFlightFilters(${turnId})">重置并查看全部 ${flights.length} 趟航班</a>
         </div>
       ` : '';
 
@@ -3128,16 +3261,53 @@
       `;
     }
 
-    function setFlightTimeFilter(turnId, timeKey) {
+    function rerenderFlightCard(turnId) {
       const st = turnStore[turnId];
       if (!st) return;
-      st.flightTimeFilter = timeKey;
       const destCurr = (st.essentials && st.essentials.currency) || 'CNY';
       const el = document.getElementById(`flight-widget-${turnId}`);
       if (el) {
         el.innerHTML = buildFlightWidgetHtml(st.flights, st.intent, destCurr, turnId);
         refreshIcons();
       }
+    }
+
+    function resetFlightFilters(turnId) {
+      const st = turnStore[turnId];
+      if (!st) return;
+      st.flightTimeFilter = 'all';
+      st.flightSort = 'default';
+      st.flightArrBefore = null;
+      st.flightMaxPrice = null;
+      st.flightStationKw = null;
+      rerenderFlightCard(turnId);
+    }
+
+    function setFlightTimeFilter(turnId, timeKey) {
+      const st = turnStore[turnId];
+      if (!st) return;
+      st.flightTimeFilter = timeKey;
+      rerenderFlightCard(turnId);
+    }
+
+    function setFlightSort(turnId, sortKey) {
+      const st = turnStore[turnId];
+      if (!st) return;
+      st.flightSort = sortKey;
+      rerenderFlightCard(turnId);
+    }
+
+    function toggleFlightExtraFilter(turnId, field) {
+      const st = turnStore[turnId];
+      if (!st || !st.intent) return;
+      if (field === 'arrBefore') {
+        st.flightArrBefore = st.flightArrBefore ? null : st.intent.arrive_before;
+      } else if (field === 'maxPrice') {
+        st.flightMaxPrice = st.flightMaxPrice ? null : st.intent.max_price;
+      } else if (field === 'stationKw') {
+        st.flightStationKw = st.flightStationKw ? null : st.intent.station_keyword;
+      }
+      rerenderFlightCard(turnId);
     }
 
     // Widget 2.2: Smart Multi-Modal Transfer (空铁联运 / 同站换乘 / 联程转机)
@@ -3234,12 +3404,32 @@
     // Widget 2.5: Hotel List
     function buildHotelWidgetHtml(hotels, hotelMeta, intent, destCurr, turnId) {
       if (!hotels || !hotels.length) return '';
+      const st = turnId ? turnStore[turnId] : null;
       const meta = hotelMeta || {};
       const city = meta.city || intent.hotel_city || intent.to_city || '';
       const zone = meta.zone || '热门区域';
       const cin = meta.checkin || intent.date || '';
+      const hSort = (st && st.hotelSort) || 'default';
+      const hMinStar = (st && st.hotelMinStar) || null;
+      const hMaxPrice = (st && st.hotelMaxPrice) || null;
 
-      const rows = hotels.slice(0, 6).map(h => {
+      let list = hotels.slice();
+      if (hMinStar && hMinStar >= 4) {
+        list = list.filter(h => (parseInt(h.star, 10) || 4) >= hMinStar);
+      }
+      if (hMaxPrice && hMaxPrice > 0) {
+        list = list.filter(h => h.price && h.price <= hMaxPrice);
+      }
+      if (hSort === 'price') {
+        list.sort((a, b) => (a.price || 99999) - (b.price || 99999));
+      } else if (hSort === 'score') {
+        list.sort((a, b) => (parseFloat(b.score) || 0) - (parseFloat(a.score) || 0));
+      }
+
+      const isAllDefault = hSort === 'default' && !hMinStar && !hMaxPrice;
+      const intentMaxPrice = intent && intent.max_price;
+
+      const rows = list.slice(0, 6).map(h => {
         const starText = h.star ? `${h.star}星/钻` : '精选';
         const scoreBadge = h.score ? `${h.score}分 ${h.score_desc || ''}` : '高分';
         const locText = [h.zone, h.position_desc].filter(Boolean).join(' · ') || h.address || '';
@@ -3275,10 +3465,58 @@
               <span class="widget-icon-badge"><i data-lucide="building-2"></i></span>
               <span>${city} · 酒店 (${zone} · ${cin} 入住)</span>
             </div>
+            <div class="widget-filters">
+              <button class="filter-pill ${isAllDefault ? 'active' : ''}" onclick="resetHotelFilters(${turnId})">全部 (${hotels.length})</button>
+              <button class="filter-pill ${hSort === 'price' ? 'active' : ''}" onclick="setHotelSort(${turnId}, '${hSort === 'price' ? 'default' : 'price'}')">低价优先</button>
+              <button class="filter-pill ${hSort === 'score' ? 'active' : ''}" onclick="setHotelSort(${turnId}, '${hSort === 'score' ? 'default' : 'score'}')">高分优先</button>
+              <button class="filter-pill ${hMinStar === 4 ? 'active' : ''}" onclick="toggleHotelStar(${turnId}, 4)">4-5星</button>
+              ${intentMaxPrice ? `<button class="filter-pill ${hMaxPrice ? 'active' : ''}" onclick="toggleHotelMaxPrice(${turnId})">≤¥${intentMaxPrice}</button>` : ''}
+            </div>
           </div>
-          <div class="w-train-list">${rows}</div>
+          <div class="w-train-list">${rows || `<div style="padding:16px;text-align:center;font-size:12.5px;color:var(--text-muted);">当前筛选下暂无匹配酒店 · <a href="javascript:void(0)" style="color:var(--accent);font-weight:600;text-decoration:none;" onclick="resetHotelFilters(${turnId})">查看全部 ${hotels.length} 家酒店</a></div>`}</div>
         </div>
       `;
+    }
+
+    function rerenderHotelCard(turnId) {
+      const st = turnStore[turnId];
+      if (!st) return;
+      const destCurr = (st.essentials && st.essentials.currency) || 'CNY';
+      const el = document.getElementById(`hotel-widget-${turnId}`);
+      if (el) {
+        el.innerHTML = buildHotelWidgetHtml(st.hotels, st.hotel_meta, st.intent, destCurr, turnId);
+        refreshIcons();
+      }
+    }
+
+    function resetHotelFilters(turnId) {
+      const st = turnStore[turnId];
+      if (!st) return;
+      st.hotelSort = 'default';
+      st.hotelMinStar = null;
+      st.hotelMaxPrice = null;
+      rerenderHotelCard(turnId);
+    }
+
+    function setHotelSort(turnId, sortKey) {
+      const st = turnStore[turnId];
+      if (!st) return;
+      st.hotelSort = sortKey;
+      rerenderHotelCard(turnId);
+    }
+
+    function toggleHotelStar(turnId, starVal) {
+      const st = turnStore[turnId];
+      if (!st) return;
+      st.hotelMinStar = st.hotelMinStar === starVal ? null : starVal;
+      rerenderHotelCard(turnId);
+    }
+
+    function toggleHotelMaxPrice(turnId) {
+      const st = turnStore[turnId];
+      if (!st || !st.intent) return;
+      st.hotelMaxPrice = st.hotelMaxPrice ? null : st.intent.max_price;
+      rerenderHotelCard(turnId);
     }
 
     // Widget 2.7: Global Attraction Tickets List
@@ -4039,7 +4277,7 @@
           widgetsHtml += buildTransferWidgetHtml(st.transfers, st.intent, destCurr, turnId);
         }
         if (st.hotels && st.hotels.length) {
-          widgetsHtml += buildHotelWidgetHtml(st.hotels, st.hotel_meta, st.intent, destCurr, turnId);
+          widgetsHtml += `<div id="hotel-widget-${turnId}">${buildHotelWidgetHtml(st.hotels, st.hotel_meta, st.intent, destCurr, turnId)}</div>`;
         }
         if (st.attractions && st.attractions.length) {
           widgetsHtml += buildAttractionWidgetHtml(st.attractions, st.attraction_meta, st.intent, destCurr, turnId);
@@ -4149,8 +4387,9 @@
         }
 
         const initTimeRange = (toolData.intent && toolData.intent.time_range) || null;
+        const initIntent = toolData.intent || {};
         turnStore[turnId] = {
-          intent: toolData.intent,
+          intent: initIntent,
           trains: toolData.trains || [],
           euro_trains: toolData.euro_trains || [],
           flights: toolData.flights || [],
@@ -4164,9 +4403,22 @@
           comparison: toolData.comparison || null,
           route_map: toolData.route_map || null,
           essentials: ess || null,
-          trainFilter: 'all',
+          trainFilter: initIntent.train_type_filter || 'all',
+          trainOnlyAvail: Boolean(initIntent.only_available),
           trainTimeFilter: (initTimeRange && initTimeRange.key) || 'all',
+          trainSort: initIntent.sort_by || 'default',
+          trainArrBefore: initIntent.arrive_before || null,
+          trainSeatPref: initIntent.seat_pref || null,
+          trainMaxPrice: initIntent.max_price || null,
+          trainStationKw: initIntent.station_keyword || null,
           flightTimeFilter: (initTimeRange && initTimeRange.key) || 'all',
+          flightSort: initIntent.sort_by || 'default',
+          flightArrBefore: initIntent.arrive_before || null,
+          flightMaxPrice: initIntent.max_price || null,
+          flightStationKw: initIntent.station_keyword || null,
+          hotelSort: initIntent.hotel_sort || 'default',
+          hotelMinStar: initIntent.hotel_min_star || null,
+          hotelMaxPrice: initIntent.max_price || null,
           customTimeRange: initTimeRange,
           expandTrains: false
         };

@@ -399,15 +399,38 @@ def parse_user_intent(
     elif any(k in message for k in ["美食", "吃货", "探店", "拍照", "人文"]):
         style = "人文美食深度游"
 
-    # Extract time-of-day or hour range filter from user message (e.g. 上午, 下午, 晚上, 早上, 9点到12点, 14点后)
-    time_range = None
+    # 1. Extract arrival deadline (e.g. "14点前到", "下午3点前赶到", "中午前抵达") vs departure time range
+    arrive_before = None
     is_pm_hint = any(k in message for k in ["下午", "傍晚", "晚上", "夜间"])
+    m_arr_before = re.search(
+        r"(\d{1,2})(?:[:：](\d{2})|点(?:半)?|时)?\s*(?:以前|之前|前)\s*(?:到|抵达|赶到|到达)",
+        message,
+    ) or re.search(
+        r"(?:到|抵达|赶到|到达).*?(\d{1,2})(?:[:：](\d{2})|点(?:半)?|时)\s*(?:以前|之前|前)",
+        message,
+    )
+    if m_arr_before:
+        ah = int(m_arr_before.group(1))
+        am = int(m_arr_before.group(2) or (30 if "半" in m_arr_before.group(0) else 0))
+        if is_pm_hint and ah < 12:
+            ah += 12
+        arr_t = f"{min(23, ah):02d}:{min(59, am):02d}"
+        arrive_before = {"time": arr_t, "label": f"{arr_t}前到达"}
+    elif re.search(r"中午(?:以前|之前|前)?(?:必须)?(?:到|抵达|赶到)", message):
+        arrive_before = {"time": "12:30", "label": "12:30前到达"}
+
+    # 2. Extract departure time-of-day or hour range filter (e.g. 上午, 下午, 晚上, 早上, 9点到12点, 14点后)
+    time_range = None
     m_hr_span = re.search(
         r"(\d{1,2})(?:[:：](\d{2})|点(?:半)?|时)?\s*(?:到|至|-|~|—)\s*(\d{1,2})(?:[:：](\d{2})|点(?:半)?|时)",
         message,
     )
     m_hr_after = re.search(r"(\d{1,2})(?:[:：](\d{2})|点|时)\s*(?:以后|之后|后)", message)
-    m_hr_before = re.search(r"(\d{1,2})(?:[:：](\d{2})|点|时)\s*(?:以前|之前|前)", message)
+    m_hr_before = (
+        None
+        if arrive_before
+        else re.search(r"(\d{1,2})(?:[:：](\d{2})|点|时)\s*(?:以前|之前|前)", message)
+    )
 
     if m_hr_span:
         h1, m1, h2, m2 = (
@@ -428,23 +451,83 @@ def parse_user_intent(
         if is_pm_hint and h1 < 12:
             h1 += 12
         s_str = f"{min(23, h1):02d}:{min(59, m1):02d}"
-        time_range = {"key": "custom", "label": f"{s_str}后", "start": s_str, "end": "23:59"}
+        time_range = {"key": "custom", "label": f"{s_str}后出发", "start": s_str, "end": "23:59"}
     elif m_hr_before:
         h2, m2 = int(m_hr_before.group(1)), int(m_hr_before.group(2) or 0)
         if is_pm_hint and h2 < 12:
             h2 += 12
         e_str = f"{min(23, h2):02d}:{min(59, m2):02d}"
-        time_range = {"key": "custom", "label": f"{e_str}前", "start": "00:00", "end": e_str}
+        time_range = {"key": "custom", "label": f"{e_str}前出发", "start": "00:00", "end": e_str}
     elif any(k in message for k in ["早上", "清晨", "早班", "一早", "清早"]):
         time_range = {"key": "morning", "label": "上午 06-12点", "start": "06:00", "end": "12:00"}
     elif "上午" in message:
         time_range = {"key": "morning", "label": "上午 06-12点", "start": "06:00", "end": "12:00"}
-    elif any(k in message for k in ["中午", "午间"]):
+    elif any(k in message for k in ["中午", "午间"]) and not arrive_before:
         time_range = {"key": "noon", "label": "中午 11-14点", "start": "11:00", "end": "14:00"}
-    elif any(k in message for k in ["下午", "午后"]):
+    elif any(k in message for k in ["下午", "午后"]) and not arrive_before:
         time_range = {"key": "afternoon", "label": "下午 12-18点", "start": "12:00", "end": "18:00"}
-    elif any(k in message for k in ["晚上", "傍晚", "夜间", "晚班", "夜里"]):
+    elif any(k in message for k in ["晚上", "傍晚", "夜间", "晚班", "夜里"]) and not arrive_before:
         time_range = {"key": "evening", "label": "晚上 18-24点", "start": "18:00", "end": "23:59"}
+
+    # 3. Extract sorting preference (最快 / 最便宜 / 最早 / 最晚)
+    sort_by = None
+    if any(k in message for k in ["最快", "耗时最短", "时间最短", "赶时间", "最省时", "快一点"]):
+        sort_by = "fastest"
+    elif any(k in message for k in ["最便宜", "便宜", "低价", "省钱", "特价", "划算", "性价比"]):
+        sort_by = "cheapest"
+    elif any(k in message for k in ["最早", "头班", "首班", "第一班"]):
+        sort_by = "earliest"
+    elif any(k in message for k in ["最晚", "末班", "最后一班"]):
+        sort_by = "latest"
+
+    # 4. Extract availability, train type & seat class filter
+    only_available = any(
+        k in message for k in ["有票", "还有票", "余票", "能买", "不要无票", "不要候补", "买得到"]
+    )
+    train_type_filter = "all"
+    if any(k in message for k in ["只看高铁", "只要高铁", "高铁", "动车", "G字头", "复兴号"]) and not any(
+        k in message for k in ["普速", "绿皮"]
+    ):
+        if any(k in message for k in ["只看高铁", "只要高铁", "G字头", "复兴号"]):
+            train_type_filter = "hsr"
+    elif any(k in message for k in ["绿皮", "普速", "夕发朝至", "过夜火车", "慢车", "K字头", "Z字头", "T字头"]):
+        train_type_filter = "normal"
+
+    seat_pref = None
+    for sp in ["商务座", "一等座", "二等座", "软卧", "硬卧", "卧铺", "硬座", "无座"]:
+        if sp in message:
+            seat_pref = sp
+            break
+
+    # 5. Extract maximum price cap (e.g. "200元以内", "不超过300块", "500以下")
+    max_price = None
+    m_max_p = re.search(
+        r"(?:不超过|低于|少于|以内|以下)\s*(\d{2,5})\s*(?:元|块|块钱)?|(\d{2,5})\s*(?:元|块|块钱)?\s*(?:以内|以下|左右)",
+        message,
+    )
+    if m_max_p:
+        max_price = int(m_max_p.group(1) or m_max_p.group(2))
+
+    # 6. Extract specific station / airport filter (e.g. 虹桥, 浦东, 杭州东, 北京南, 大兴)
+    station_keyword = None
+    station_candidates = [
+        "虹桥", "上海南", "上海站", "浦东", "杭州东", "杭州西", "杭州南", "萧山",
+        "北京南", "北京西", "北京北", "北京朝阳", "丰台", "大兴", "首都",
+        "广州南", "广州东", "白云", "深圳北", "福田", "宝安",
+        "南京南", "成都东", "天府", "双流", "重庆北", "重庆西", "江北", "武汉站", "汉口", "武昌", "玉山南",
+    ]
+    for st_kw in station_candidates:
+        if st_kw in message:
+            station_keyword = st_kw
+            break
+
+    # 7. Extract hotel star & rating filter
+    hotel_min_star = None
+    if any(k in message for k in ["五星", "5星", "豪华型", "奢华"]):
+        hotel_min_star = 5
+    elif any(k in message for k in ["四星", "4星", "高档型"]):
+        hotel_min_star = 4
+    hotel_sort = "score" if any(k in message for k in ["高分", "评分高", "口碑好", "好评"]) else ("price" if sort_by == "cheapest" else None)
 
     return {
         "from_city": from_city,
@@ -456,6 +539,15 @@ def parse_user_intent(
         "budget": budget,
         "style": style,
         "time_range": time_range,
+        "arrive_before": arrive_before,
+        "sort_by": sort_by,
+        "only_available": only_available,
+        "train_type_filter": train_type_filter,
+        "seat_pref": seat_pref,
+        "max_price": max_price,
+        "station_keyword": station_keyword,
+        "hotel_min_star": hotel_min_star,
+        "hotel_sort": hotel_sort,
         "needs_itinerary": needs_itinerary,
         "only_train": only_train,
         "only_flight": only_flight,
@@ -916,11 +1008,27 @@ def generate_chat_response(
             "严禁编造数据！控制在 100~200 字以内，条理清晰。"
         )
 
-    time_range_str = f" | 指定出发时段：{time_range['label']} ({time_range['start']}~{time_range['end']})" if time_range else ""
+    extra_filters_desc = []
+    if time_range:
+        extra_filters_desc.append(f"出发时段:{time_range['label']}({time_range['start']}~{time_range['end']})")
+    if intent.get("arrive_before"):
+        extra_filters_desc.append(f"到达限制:{intent['arrive_before']['label']}")
+    if intent.get("sort_by"):
+        extra_filters_desc.append(f"排序偏好:{intent['sort_by']}")
+    if intent.get("only_available"):
+        extra_filters_desc.append("仅看有余票")
+    if intent.get("seat_pref"):
+        extra_filters_desc.append(f"指定席别:{intent['seat_pref']}")
+    if intent.get("max_price"):
+        extra_filters_desc.append(f"价格上限:≤¥{intent['max_price']}")
+    if intent.get("station_keyword"):
+        extra_filters_desc.append(f"指定车站/机场:{intent['station_keyword']}")
+    filter_summary_str = (" | 筛选指令：" + "、".join(extra_filters_desc)) if extra_filters_desc else ""
+
     user_prompt = (
         f"{hist_text}\n"
         f"【当前用户提问】：{user_message}\n"
-        f"【解析路线参数】：{from_city} -> {to_city} (酒店城市: {hotel_city}, 景点城市: {attraction_city}) | 日期：{date_str}{time_range_str} | 天数：{intent.get('days')}天\n"
+        f"【解析路线参数】：{from_city} -> {to_city} (酒店城市: {hotel_city}, 景点城市: {attraction_city}) | 日期：{date_str}{filter_summary_str} | 天数：{intent.get('days')}天\n"
         f"【12306 实时检出车次（共{len(trains)}趟，前16趟明细）】：{json.dumps(trains_brief, ensure_ascii=False)}\n"
         f"【欧洲跨国/城际铁路实时车次（共{len(euro_trains)}趟）】：{json.dumps(euro_trains_brief, ensure_ascii=False)}\n"
         f"【OTA 实时检出国内/国际航班（共{len(flights)}架次）】：{json.dumps(flights_brief, ensure_ascii=False)}\n"
