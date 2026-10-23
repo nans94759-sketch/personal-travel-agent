@@ -520,6 +520,10 @@
       background: var(--bg-card-solid);
     }
 
+    .turn-calc-grid.single-col {
+      grid-template-columns: 1fr;
+    }
+
     .calc-panel {
       background: var(--bg-subtle);
       border: 1px solid var(--border);
@@ -1666,10 +1670,44 @@
       return `${meta.symbol}${val.toFixed(1)}`;
     }
 
-    // Format price for cards: interactive component that loads into turn converter on click
+    // Smart detection: Does this turn involve a timezone difference or foreign currency?
+    function turnNeedsTzConversion(turnId) {
+      const st = turnId ? turnStore[turnId] : null;
+      if (!st) return false;
+      if (st.essentials && typeof st.essentials.tz_offset === 'number' && st.essentials.tz_offset !== 8) {
+        return true;
+      }
+      if ((st.flights || []).some(f => typeof f.arr_tz_offset === 'number' && f.arr_tz_offset !== 8)) {
+        return true;
+      }
+      if ((st.transfers || []).some(tr => {
+        const l2 = tr.leg2 || {};
+        return (typeof tr.arr_tz_offset === 'number' && tr.arr_tz_offset !== 8) ||
+               (typeof l2.arr_tz_offset === 'number' && l2.arr_tz_offset !== 8);
+      })) {
+        return true;
+      }
+      return false;
+    }
+
+    function turnNeedsFxConversion(turnId) {
+      if (activeCurrency !== 'CNY') return true;
+      const st = turnId ? turnStore[turnId] : null;
+      if (!st) return false;
+      if (st.essentials && st.essentials.currency && st.essentials.currency !== 'CNY') {
+        return true;
+      }
+      return false;
+    }
+
+    // Format price for cards: interactive component only when cross-currency or foreign currency selected
     function formatPriceHtml(cnyAmount, destCurrencyCode, turnId, labelText) {
       const n = Number(cnyAmount);
       if (!n || isNaN(n)) return '--';
+      const hasFx = turnNeedsFxConversion(turnId) || (destCurrencyCode && destCurrencyCode !== 'CNY');
+      if (!hasFx) {
+        return `¥${Math.round(n)}`;
+      }
       const targetCurr = activeCurrency !== 'CNY'
         ? activeCurrency
         : (destCurrencyCode && destCurrencyCode !== 'CNY' ? destCurrencyCode : 'USD');
@@ -1723,17 +1761,17 @@
       };
     }
 
-    // Render interactive arrival time badge for cross-timezone or domestic trips
+    // Render arrival time: only show timezone pill when origin & destination have a timezone difference
     function renderArrivalTimeComp(depTime, arrTimeLocal, arrTimeBj, durMins, arrTzOffset, cityLabel, turnId) {
       const tzOff = typeof arrTzOffset === 'number' ? arrTzOffset : 8;
       const calc = computeArrivalByTz(depTime, durMins, tzOff);
       const locT = arrTimeLocal && /^\d{2}:\d{2}$/.test(arrTimeLocal) ? arrTimeLocal : calc.locStr;
       const bjT = arrTimeBj && /^\d{2}:\d{2}$/.test(arrTimeBj) ? arrTimeBj : calc.bjStr;
-      const clickLoad = turnId
-        ? `onclick="onTimePillClick(event, ${turnId}, '${depTime}', ${durMins || 180}, ${tzOff}, '${(cityLabel || '').replace(/'/g, '')}')"`
-        : '';
 
       if (tzOff !== 8) {
+        const clickLoad = turnId
+          ? `onclick="onTimePillClick(event, ${turnId}, '${depTime}', ${durMins || 180}, ${tzOff}, '${(cityLabel || '').replace(/'/g, '')}')"`
+          : '';
         const sign = tzOff >= 0 ? `+${tzOff}` : `${tzOff}`;
         if (arrivalTimeMode === 'local') {
           return `${depTime} <i data-lucide="arrow-right" style="width:12px;height:12px;color:var(--text-muted);"></i> <strong>${locT}</strong> <span class="tz-inline-pill" ${clickLoad} title="点击切换时区或带入到达时间换算器">${cityLabel || '当地'} UTC${sign} · 北京${bjT} ⇄</span>`;
@@ -1741,7 +1779,8 @@
           return `${depTime} <i data-lucide="arrow-right" style="width:12px;height:12px;color:var(--text-muted);"></i> <strong>${bjT}</strong> <span class="tz-inline-pill" ${clickLoad} title="点击切换时区或带入到达时间换算器">北京时间 · ${cityLabel || '当地'}${locT} ⇄</span>`;
         }
       }
-      return `${depTime} <i data-lucide="arrow-right" style="width:12px;height:12px;color:var(--text-muted);"></i> ${arrTimeLocal || locT} <span class="tz-inline-pill" ${clickLoad} title="点击带入到达时间换算器">换算 ⇄</span>`;
+      // Same timezone (UTC+8): display clean departure -> arrival without redundant conversion pills
+      return `${depTime} <i data-lucide="arrow-right" style="width:12px;height:12px;color:var(--text-muted);"></i> ${arrTimeLocal || locT}`;
     }
 
     // Render currency buttons inside popover
@@ -1933,12 +1972,14 @@
     function formatSimpleMarkdown(text, turnId) {
       if (!text) return '';
       const st = turnId ? turnStore[turnId] : null;
+      const showFxChip = turnNeedsFxConversion(turnId);
+      const showTimeChip = turnNeedsTzConversion(turnId);
       const destCurr = (st && st.essentials && st.essentials.currency && st.essentials.currency !== 'CNY')
         ? st.essentials.currency
-        : (activeCurrency !== 'CNY' ? activeCurrency : 'VND');
+        : (activeCurrency !== 'CNY' ? activeCurrency : 'CNY');
       const tzOff = (st && st.essentials && typeof st.essentials.tz_offset === 'number')
         ? st.essentials.tz_offset
-        : activeTzOffset;
+        : 8;
       const cityName = (st && ((st.essentials && st.essentials.city) || (st.intent && st.intent.to_city))) || '';
 
       let escaped = text
@@ -1948,23 +1989,27 @@
       escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
       escaped = escaped.replace(/`([^`]+)`/g, '<code style="font-family:var(--font-mono);background:var(--bg-muted);padding:1px 6px;border-radius:5px;">$1</code>');
 
-      // Turn inline prices (e.g. ¥892, ¥1,280, 892元) into interactive currency components
-      escaped = escaped.replace(/(?:¥\s*(\d{2,6}(?:,\d{3})*)|(\d{2,6})\s*元)/g, (match, p1, p2) => {
-        const rawNum = parseInt(String(p1 || p2).replace(/,/g, ''), 10);
-        if (!rawNum || isNaN(rawNum) || rawNum < 15) return match;
-        const targetCode = activeCurrency !== 'CNY' ? activeCurrency : destCurr;
-        const convStr = targetCode && targetCode !== 'CNY' ? ` ⇄ ${formatConvertedValue(rawNum, targetCode)}` : '';
-        const clickFn = turnId ? `onclick="loadPriceIntoTurnCalc(${turnId}, ${rawNum}, '${targetCode}')"` : '';
-        return `<span class="chat-fx-chip" ${clickFn} title="点击带入下方汇率组件动态换算">¥${rawNum}${convStr}</span>`;
-      });
+      // Only convert inline prices into currency chips when the trip involves foreign currency
+      if (showFxChip && destCurr !== 'CNY') {
+        escaped = escaped.replace(/(?:¥\s*(\d{2,6}(?:,\d{3})*)|(\d{2,6})\s*元)/g, (match, p1, p2) => {
+          const rawNum = parseInt(String(p1 || p2).replace(/,/g, ''), 10);
+          if (!rawNum || isNaN(rawNum) || rawNum < 15) return match;
+          const targetCode = activeCurrency !== 'CNY' ? activeCurrency : destCurr;
+          const convStr = targetCode && targetCode !== 'CNY' ? ` ⇄ ${formatConvertedValue(rawNum, targetCode)}` : '';
+          const clickFn = turnId ? `onclick="loadPriceIntoTurnCalc(${turnId}, ${rawNum}, '${targetCode}')"` : '';
+          return `<span class="chat-fx-chip" ${clickFn} title="点击带入下方汇率组件动态换算">¥${rawNum}${convStr}</span>`;
+        });
+      }
 
-      // Turn inline HH:MM schedules (e.g. 10:18, 07:25) into interactive time components
-      escaped = escaped.replace(/\b([01]\d|2[0-3]):([0-5]\d)\b/g, (match) => {
-        const clickFn = turnId
-          ? `onclick="onTimePillClick(event, ${turnId}, '${match}', 210, ${tzOff}, '${cityName.replace(/'/g, '')}')"`
-          : '';
-        return `<span class="chat-time-chip" ${clickFn} title="点击带入到达时间换算器"><i data-lucide="clock"></i>${match}</span>`;
-      });
+      // Only convert inline HH:MM into time chips when origin & destination have a timezone difference
+      if (showTimeChip && tzOff !== 8) {
+        escaped = escaped.replace(/\b([01]\d|2[0-3]):([0-5]\d)\b/g, (match) => {
+          const clickFn = turnId
+            ? `onclick="onTimePillClick(event, ${turnId}, '${match}', 210, ${tzOff}, '${cityName.replace(/'/g, '')}')"`
+            : '';
+          return `<span class="chat-time-chip" ${clickFn} title="点击带入到达时间换算器"><i data-lucide="clock"></i>${match}</span>`;
+        });
+      }
 
       const lines = escaped.split('\n');
       let html = '';
@@ -2110,12 +2155,16 @@
       return st.calcState;
     }
 
-    // In-Chat Interactive Arrival Time & Currency Dynamic Component
+    // In-Chat Interactive Arrival Time & Currency Dynamic Component (Smartly hidden when same timezone & same currency)
     function buildTurnTimeFxWidgetHtml(turnId) {
       const st = turnStore[turnId];
       if (!st) return '';
       const hasData = (st.trains && st.trains.length) || (st.flights && st.flights.length) || (st.transfers && st.transfers.length) || (st.hotels && st.hotels.length) || (st.essentials && st.essentials.city);
       if (!hasData) return '';
+
+      const showTz = turnNeedsTzConversion(turnId);
+      const showFx = turnNeedsFxConversion(turnId);
+      if (!showTz && !showFx) return '';
 
       const cs = ensureTurnCalcState(turnId);
       if (!cs) return '';
@@ -2155,9 +2204,7 @@
         `<option value="${c.code}" ${currCode === c.code ? 'selected' : ''}>${c.name} (${c.code})</option>`
       ).join('');
 
-      return `
-        <div class="turn-calc-grid" id="turn-calc-${turnId}">
-          <!-- Left: Arrival Time & Timezone Calculator -->
+      const tzPanelHtml = showTz ? `
           <div class="calc-panel">
             <div class="calc-panel-head">
               <div class="calc-panel-title">
@@ -2192,8 +2239,9 @@
               </div>
             </div>
           </div>
+      ` : '';
 
-          <!-- Right: Ticket Price & Currency Dynamic Calculator -->
+      const fxPanelHtml = showFx ? `
           <div class="calc-panel">
             <div class="calc-panel-head">
               <div class="calc-panel-title">
@@ -2226,6 +2274,13 @@
               </div>
             </div>
           </div>
+      ` : '';
+
+      const isSingle = (showTz && !showFx) || (!showTz && showFx);
+      return `
+        <div class="turn-calc-grid ${isSingle ? 'single-col' : ''}" id="turn-calc-${turnId}">
+          ${tzPanelHtml}
+          ${fxPanelHtml}
         </div>
       `;
     }
