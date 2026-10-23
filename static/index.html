@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>远行客 — 实时查票 · 订酒店 · 行程助手</title>
   <link rel="icon" type="image/png" href="/static/logo.png" />
+  <link rel="stylesheet" href="/static/vendor/leaflet.css" />
+  <script src="/static/vendor/leaflet.js"></script>
   <script src="/static/vendor/lucide.min.js"></script>
   <script src="/static/vendor/gsap.min.js"></script>
   <style>
@@ -1222,6 +1224,253 @@
       font-weight: 600;
     }
 
+    /* Smart Interactive Route Map Widget */
+    .smart-map-canvas {
+      width: 100%;
+      height: 335px;
+      background: #EDE8E1;
+      position: relative;
+      z-index: 1;
+      transition: height 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .smart-map-canvas.expanded {
+      height: 510px;
+    }
+
+    .map-subbar {
+      padding: 8px 14px;
+      background: #FAF8F5;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 11.5px;
+    }
+
+    .map-subbar-group {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .map-tsp-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: var(--green-bg);
+      color: var(--green);
+      border: 1px solid rgba(5, 150, 105, 0.22);
+    }
+
+    .map-legs-strip {
+      padding: 10px 14px;
+      background: var(--bg-card-solid);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+    }
+
+    .map-node-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 9px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-strong);
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .map-node-pill:hover {
+      background: var(--obsidian);
+      color: #fff;
+      border-color: var(--obsidian);
+      transform: translateY(-1px);
+    }
+
+    .map-node-pill .num-circle {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--obsidian);
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .map-node-pill.hotel .num-circle {
+      background: #7C3AED;
+    }
+
+    .map-node-pill.attraction .num-circle {
+      background: var(--accent);
+    }
+
+    .map-node-pill.origin .num-circle {
+      background: var(--blue);
+    }
+
+    .map-node-pill.destination .num-circle {
+      background: var(--green);
+    }
+
+    .map-node-pill:hover .num-circle {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .map-leg-connector {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--text-secondary);
+      background: var(--bg-muted);
+      padding: 2px 7px;
+      border-radius: 999px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* Custom Leaflet DivIcon Marker & Animated Route Path */
+    .custom-map-pin-icon {
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .map-pin-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transform: translate(-14px, -14px);
+      pointer-events: auto;
+    }
+
+    .map-pin-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--obsidian);
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2.5px solid #fff;
+      box-shadow: 0 4px 10px rgba(21, 22, 26, 0.28);
+      flex-shrink: 0;
+    }
+
+    .map-pin-badge.origin {
+      background: var(--blue);
+    }
+
+    .map-pin-badge.destination {
+      background: var(--green);
+    }
+
+    .map-pin-badge.hub {
+      background: #D97706;
+    }
+
+    .map-pin-badge.hotel {
+      background: #7C3AED;
+    }
+
+    .map-pin-badge.attraction {
+      background: var(--accent);
+    }
+
+    .map-pin-badge.stopover {
+      width: 22px;
+      height: 22px;
+      font-size: 10.5px;
+      background: var(--blue);
+    }
+
+    .map-pin-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(21, 22, 26, 0.16);
+      border-radius: 8px;
+      padding: 3px 8px;
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      box-shadow: 0 3px 10px rgba(21, 22, 26, 0.12);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .map-pin-card .pin-price {
+      font-family: var(--font-mono);
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .map-arc-mid-label {
+      background: rgba(21, 22, 26, 0.88);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      transform: translate(-50%, -50%);
+    }
+
+    @keyframes mapDashFlow {
+      to {
+        stroke-dashoffset: -36;
+      }
+    }
+
+    path.leaflet-interactive.map-flow-line {
+      animation: mapDashFlow 1.2s linear infinite;
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px !important;
+      box-shadow: 0 12px 28px rgba(21, 22, 26, 0.18) !important;
+      font-family: var(--font-sans) !important;
+      padding: 2px !important;
+    }
+
+    .leaflet-popup-content {
+      margin: 10px 12px !important;
+      line-height: 1.45 !important;
+    }
+
     /* AI Markdown Text Body */
     .ai-reply-text {
       font-size: 14.5px;
@@ -1244,6 +1493,78 @@
 
     .ai-reply-text li {
       margin-bottom: 4px;
+    }
+
+    .ai-reply-text .md-heading {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin: 10px 0 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ai-reply-text .md-heading:first-child {
+      margin-top: 0;
+    }
+
+    .ai-reply-text .md-table-wrap {
+      overflow-x: auto;
+      margin: 8px 0 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      background: var(--bg-card-solid);
+    }
+
+    .ai-reply-text .md-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      text-align: left;
+    }
+
+    .ai-reply-text .md-table th {
+      background: #F7F3EE;
+      color: var(--text-main);
+      font-weight: 700;
+      padding: 8px 11px;
+      border-bottom: 1px solid var(--border-strong);
+      white-space: nowrap;
+    }
+
+    .ai-reply-text .md-table td {
+      padding: 7px 11px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-main);
+    }
+
+    .ai-reply-text .md-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .ai-reply-text .md-quote {
+      border-left: 3px solid var(--accent);
+      background: var(--bg-subtle);
+      padding: 6px 12px;
+      border-radius: 0 8px 8px 0;
+      margin: 6px 0;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .ai-reply-text .md-hr {
+      border: none;
+      border-top: 1px dashed var(--border-strong);
+      margin: 10px 0;
+    }
+
+    .filter-divider {
+      width: 1px;
+      height: 14px;
+      background: var(--border-strong);
+      margin: 0 2px;
+      display: inline-block;
     }
 
     .ai-thinking {
@@ -1598,6 +1919,10 @@
         <button class="qp-btn" onclick="sendPrompt('河内，机场旁边，酒店价格，下周一')">
           <i data-lucide="building-2"></i>
           <span>下周一河内机场旁酒店</span>
+        </button>
+        <button class="qp-btn" onclick="sendPrompt('下周一去河内，推荐高分酒店和必去景点门票，并规划顺路游览路线')">
+          <i data-lucide="compass"></i>
+          <span>河内酒店+景点智能画路线</span>
         </button>
       </div>
       <div class="input-box">
@@ -1989,49 +2314,133 @@
         : 8;
       const cityName = (st && ((st.essentials && st.essentials.city) || (st.intent && st.intent.to_city))) || '';
 
-      let escaped = text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-      escaped = escaped.replace(/`([^`]+)`/g, '<code style="font-family:var(--font-mono);background:var(--bg-muted);padding:1px 6px;border-radius:5px;">$1</code>');
+      function formatInlineMd(str) {
+        let s = str
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        s = s.replace(/`([^`]+)`/g, '<code style="font-family:var(--font-mono);background:var(--bg-muted);padding:1px 6px;border-radius:5px;">$1</code>');
 
-      // Only convert inline prices into currency chips when the trip involves foreign currency
-      if (showFxChip && destCurr !== 'CNY') {
-        escaped = escaped.replace(/(?:¥\s*(\d{2,6}(?:,\d{3})*)|(\d{2,6})\s*元)/g, (match, p1, p2) => {
-          const rawNum = parseInt(String(p1 || p2).replace(/,/g, ''), 10);
-          if (!rawNum || isNaN(rawNum) || rawNum < 15) return match;
-          const targetCode = activeCurrency !== 'CNY' ? activeCurrency : destCurr;
-          const convStr = targetCode && targetCode !== 'CNY' ? ` ⇄ ${formatConvertedValue(rawNum, targetCode)}` : '';
-          const clickFn = turnId ? `onclick="loadPriceIntoTurnCalc(${turnId}, ${rawNum}, '${targetCode}')"` : '';
-          return `<span class="chat-fx-chip" ${clickFn} title="点击带入下方汇率组件动态换算">¥${rawNum}${convStr}</span>`;
-        });
+        if (showFxChip && destCurr !== 'CNY') {
+          s = s.replace(/(?:¥\s*(\d{2,6}(?:,\d{3})*)|(\d{2,6})\s*元)/g, (match, p1, p2) => {
+            const rawNum = parseInt(String(p1 || p2).replace(/,/g, ''), 10);
+            if (!rawNum || isNaN(rawNum) || rawNum < 15) return match;
+            const targetCode = activeCurrency !== 'CNY' ? activeCurrency : destCurr;
+            const convStr = targetCode && targetCode !== 'CNY' ? ` ⇄ ${formatConvertedValue(rawNum, targetCode)}` : '';
+            const clickFn = turnId ? `onclick="loadPriceIntoTurnCalc(${turnId}, ${rawNum}, '${targetCode}')"` : '';
+            return `<span class="chat-fx-chip" ${clickFn} title="点击带入下方汇率组件动态换算">¥${rawNum}${convStr}</span>`;
+          });
+        }
+
+        if (showTimeChip && tzOff !== 8) {
+          s = s.replace(/\b([01]\d|2[0-3]):([0-5]\d)\b/g, (match) => {
+            const clickFn = turnId
+              ? `onclick="onTimePillClick(event, ${turnId}, '${match}', 210, ${tzOff}, '${cityName.replace(/'/g, '')}')"`
+              : '';
+            return `<span class="chat-time-chip" ${clickFn} title="点击带入到达时间换算器"><i data-lucide="clock"></i>${match}</span>`;
+          });
+        }
+        return s;
       }
 
-      // Only convert inline HH:MM into time chips when origin & destination have a timezone difference
-      if (showTimeChip && tzOff !== 8) {
-        escaped = escaped.replace(/\b([01]\d|2[0-3]):([0-5]\d)\b/g, (match) => {
-          const clickFn = turnId
-            ? `onclick="onTimePillClick(event, ${turnId}, '${match}', 210, ${tzOff}, '${cityName.replace(/'/g, '')}')"`
-            : '';
-          return `<span class="chat-time-chip" ${clickFn} title="点击带入到达时间换算器"><i data-lucide="clock"></i>${match}</span>`;
-        });
-      }
-
-      const lines = escaped.split('\n');
+      const lines = text.split('\n');
       let html = '';
-      let inList = false;
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (/^[-•*]\s+/.test(trimmed)) {
-          if (!inList) { html += '<ul>'; inList = true; }
-          html += `<li>${trimmed.replace(/^[-•*]\s+/, '')}</li>`;
-        } else {
-          if (inList) { html += '</ul>'; inList = false; }
-          if (trimmed) html += `<p>${trimmed}</p>`;
+      let listMode = null; // 'ul' | 'ol' | null
+      let tableRows = [];
+
+      function closeList() {
+        if (listMode) {
+          html += `</${listMode}>`;
+          listMode = null;
         }
       }
-      if (inList) html += '</ul>';
+
+      function flushTable() {
+        if (!tableRows.length) return;
+        const parsedRows = tableRows
+          .map(r => r.replace(/^\||\|$/g, '').split('|').map(c => c.trim()))
+          .filter(cells => !cells.every(c => /^[:\-\s]*$/.test(c)));
+        if (parsedRows.length) {
+          html += '<div class="md-table-wrap"><table class="md-table">';
+          html += '<thead><tr>' + parsedRows[0].map(c => `<th>${formatInlineMd(c)}</th>`).join('') + '</tr></thead>';
+          if (parsedRows.length > 1) {
+            html += '<tbody>' + parsedRows.slice(1).map(row =>
+              '<tr>' + row.map(c => `<td>${formatInlineMd(c)}</td>`).join('') + '</tr>'
+            ).join('') + '</tbody>';
+          }
+          html += '</table></div>';
+        }
+        tableRows = [];
+      }
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          closeList();
+          flushTable();
+          continue;
+        }
+
+        // Markdown Table Row: | col1 | col2 |
+        if (/^\|.+\|$/.test(trimmed)) {
+          closeList();
+          tableRows.push(trimmed);
+          continue;
+        } else {
+          flushTable();
+        }
+
+        // Horizontal Rule: --- or ***
+        if (/^([-*])\1{2,}$/.test(trimmed)) {
+          closeList();
+          html += '<hr class="md-hr" />';
+          continue;
+        }
+
+        // Heading: #, ##, ###, ####
+        const mHead = trimmed.match(/^(#{1,4})\s+(.+)$/);
+        if (mHead) {
+          closeList();
+          html += `<div class="md-heading">${formatInlineMd(mHead[2])}</div>`;
+          continue;
+        }
+
+        // Blockquote: > text
+        if (/^>\s+/.test(trimmed)) {
+          closeList();
+          html += `<div class="md-quote">${formatInlineMd(trimmed.replace(/^>\s+/, ''))}</div>`;
+          continue;
+        }
+
+        // Unordered List: - / * / •
+        if (/^[-•*]\s+/.test(trimmed)) {
+          if (listMode !== 'ul') {
+            closeList();
+            html += '<ul>';
+            listMode = 'ul';
+          }
+          html += `<li>${formatInlineMd(trimmed.replace(/^[-•*]\s+/, ''))}</li>`;
+          continue;
+        }
+
+        // Ordered List: 1. / 2.
+        if (/^\d+[.、]\s+/.test(trimmed)) {
+          if (listMode !== 'ol') {
+            closeList();
+            html += '<ol>';
+            listMode = 'ol';
+          }
+          html += `<li>${formatInlineMd(trimmed.replace(/^\d+[.、]\s+/, ''))}</li>`;
+          continue;
+        }
+
+        closeList();
+        html += `<p>${formatInlineMd(trimmed)}</p>`;
+      }
+
+      closeList();
+      flushTable();
       return html;
     }
 
@@ -2440,17 +2849,42 @@
       return { cls: 'avail', text: s || '有票', tip: '实时有票' };
     }
 
+    function matchTimeSlot(depTimeStr, timeFilterKey, customRange) {
+      if (!timeFilterKey || timeFilterKey === 'all') return true;
+      const t = String(depTimeStr || '').trim();
+      if (!/^\d{2}:\d{2}$/.test(t)) return true;
+      if (timeFilterKey === 'morning') return t >= '00:00' && t < '12:00';
+      if (timeFilterKey === 'noon') return t >= '11:00' && t <= '14:00';
+      if (timeFilterKey === 'afternoon') return t >= '12:00' && t < '18:00';
+      if (timeFilterKey === 'evening') return t >= '18:00' && t <= '23:59';
+      if (timeFilterKey === 'custom' && customRange) {
+        return t >= (customRange.start || '00:00') && t <= (customRange.end || '23:59');
+      }
+      return true;
+    }
+
     // Widget 1: Train List
     function buildTrainWidgetHtml(turnId) {
       const st = turnStore[turnId];
       if (!st || !st.trains || !st.trains.length) return '';
       const destCurr = (st.essentials && st.essentials.currency) || 'CNY';
+      const tFilter = st.trainTimeFilter || 'all';
+      const rawCustom = st.customTimeRange || (st.intent && st.intent.time_range);
+      const customTr = (rawCustom && rawCustom.key === 'custom') ? rawCustom : null;
+
+      const cntMorning = st.trains.filter(t => matchTimeSlot(t.dep_time, 'morning')).length;
+      const cntAfternoon = st.trains.filter(t => matchTimeSlot(t.dep_time, 'afternoon')).length;
+      const cntEvening = st.trains.filter(t => matchTimeSlot(t.dep_time, 'evening')).length;
+      const cntCustom = customTr ? st.trains.filter(t => matchTimeSlot(t.dep_time, 'custom', customTr)).length : 0;
 
       let list = st.trains.slice();
       if (st.trainFilter === 'hsr') {
         list = list.filter(t => /^[GDC]/.test(t.train_code));
       } else if (st.trainFilter === 'avail') {
         list = list.filter(t => t.can_buy);
+      }
+      if (tFilter && tFilter !== 'all') {
+        list = list.filter(t => matchTimeSlot(t.dep_time, tFilter, customTr));
       }
 
       const visibleList = st.expandTrains ? list : list.slice(0, 5);
@@ -2499,21 +2933,40 @@
               <span>${st.intent.from_city} → ${st.intent.to_city} · 火车票 (${st.intent.date})</span>
             </div>
             <div class="widget-filters">
-              <button class="filter-pill ${st.trainFilter === 'all' ? 'active' : ''}" onclick="setTrainFilter(${turnId}, 'all')">全部 (${st.trains.length})</button>
-              <button class="filter-pill ${st.trainFilter === 'hsr' ? 'active' : ''}" onclick="setTrainFilter(${turnId}, 'hsr')">只看高铁</button>
-              <button class="filter-pill ${st.trainFilter === 'avail' ? 'active' : ''}" onclick="setTrainFilter(${turnId}, 'avail')">只看有票</button>
+              <button class="filter-pill ${st.trainFilter === 'all' && tFilter === 'all' ? 'active' : ''}" onclick="setTrainFilter(${turnId}, 'all', 'all')">全部 (${st.trains.length})</button>
+              ${cntMorning > 0 || tFilter === 'morning' ? `<button class="filter-pill ${tFilter === 'morning' ? 'active' : ''}" onclick="setTrainTimeFilter(${turnId}, '${tFilter === 'morning' ? 'all' : 'morning'}')">上午 (${cntMorning})</button>` : ''}
+              ${tFilter === 'noon' ? `<button class="filter-pill active" onclick="setTrainTimeFilter(${turnId}, 'all')">中午 11-14点</button>` : ''}
+              ${cntAfternoon > 0 || tFilter === 'afternoon' ? `<button class="filter-pill ${tFilter === 'afternoon' ? 'active' : ''}" onclick="setTrainTimeFilter(${turnId}, '${tFilter === 'afternoon' ? 'all' : 'afternoon'}')">下午 (${cntAfternoon})</button>` : ''}
+              ${cntEvening > 0 || tFilter === 'evening' ? `<button class="filter-pill ${tFilter === 'evening' ? 'active' : ''}" onclick="setTrainTimeFilter(${turnId}, '${tFilter === 'evening' ? 'all' : 'evening'}')">晚上 (${cntEvening})</button>` : ''}
+              ${customTr ? `<button class="filter-pill ${tFilter === 'custom' ? 'active' : ''}" onclick="setTrainTimeFilter(${turnId}, '${tFilter === 'custom' ? 'all' : 'custom'}')">${customTr.label} (${cntCustom})</button>` : ''}
+              <span class="filter-divider"></span>
+              <button class="filter-pill ${st.trainFilter === 'hsr' ? 'active' : ''}" onclick="setTrainFilter(${turnId}, '${st.trainFilter === 'hsr' ? 'all' : 'hsr'}')">只看高铁</button>
+              <button class="filter-pill ${st.trainFilter === 'avail' ? 'active' : ''}" onclick="setTrainFilter(${turnId}, '${st.trainFilter === 'avail' ? 'all' : 'avail'}')">只看有票</button>
               ${(!st.transfers || !st.transfers.length) ? `<button class="filter-pill" onclick="loadSmartTransfers(${turnId})"><i data-lucide="git-branch" style="width:11px;height:11px;"></i> 智能中转</button>` : ''}
             </div>
           </div>
-          <div class="w-train-list">${rowsHtml || '<div style="padding:14px;font-size:12.5px;color:var(--text-muted);">暂无符合筛选条件的车次</div>'}</div>
+          <div class="w-train-list">${rowsHtml || '<div style="padding:14px;font-size:12.5px;color:var(--text-muted);">当前时段暂无符合筛选条件的车次，可点击上方「全部」查看全天班次</div>'}</div>
           ${moreBtn}
         </div>
       `;
     }
 
-    function setTrainFilter(turnId, filter) {
+    function setTrainFilter(turnId, filter, timeOverride) {
       if (!turnStore[turnId]) return;
       turnStore[turnId].trainFilter = filter;
+      if (timeOverride) {
+        turnStore[turnId].trainTimeFilter = timeOverride;
+      }
+      const el = document.getElementById(`train-widget-${turnId}`);
+      if (el) {
+        el.innerHTML = buildTrainWidgetHtml(turnId);
+        refreshIcons();
+      }
+    }
+
+    function setTrainTimeFilter(turnId, timeKey) {
+      if (!turnStore[turnId]) return;
+      turnStore[turnId].trainTimeFilter = timeKey;
       const el = document.getElementById(`train-widget-${turnId}`);
       if (el) {
         el.innerHTML = buildTrainWidgetHtml(turnId);
@@ -2558,6 +3011,21 @@
           if (window.gsap) {
             gsap.fromTo(strip.querySelectorAll('.stop-pill'), { x: -10, autoAlpha: 0 }, { x: 0, autoAlpha: 1, stagger: 0.03, duration: 0.28, ease: 'power2.out' });
           }
+          // Sync stopover coordinates to the turn's interactive map!
+          const st = turnStore[turnId];
+          if (st && data.map_points && data.map_points.length >= 2) {
+            if (!st.route_map) {
+              st.route_map = { ok: true, default_tab: 'stopovers', has_intercity: false, has_city_route: false, has_stopovers: true, intercity: {}, stopovers: {}, city_route: null };
+            }
+            const tObj = (st.trains || [])[idx] || {};
+            st.route_map.has_stopovers = true;
+            st.route_map.stopovers = {
+              train_code: tObj.train_code || '',
+              points: data.map_points
+            };
+            ensureTurnMapUi(turnId).activeTab = 'stopovers';
+            rerenderTurnMapOnly(turnId);
+          }
         } else {
           strip.innerHTML = `<span style="font-size:11.5px;color:var(--text-muted);">暂无经停数据</span>`;
         }
@@ -2571,9 +3039,22 @@
       if (!flights || !flights.length) return '';
       const st = turnId ? turnStore[turnId] : null;
       const showTrBtn = st && (!st.transfers || !st.transfers.length);
-      const maxRows = flights[0] && flights[0].is_international_calendar ? 3 : 5;
+      const timeFilter = (st && st.flightTimeFilter) || 'all';
+      const customRange = (st && st.customTimeRange) || (intent && intent.time_range);
+      const isIntlCal = flights[0] && flights[0].is_international_calendar;
+      const maxRows = isIntlCal ? 3 : 6;
       const essTz = st && st.essentials && typeof st.essentials.tz_offset === 'number' ? st.essentials.tz_offset : 8;
-      const rows = flights.slice(0, maxRows).map(f => {
+
+      const countMorning = flights.filter(f => matchTimeSlot(f.dep_time, 'morning')).length;
+      const countAfternoon = flights.filter(f => matchTimeSlot(f.dep_time, 'afternoon')).length;
+      const countEvening = flights.filter(f => matchTimeSlot(f.dep_time, 'evening')).length;
+
+      let filteredFlights = flights;
+      if (!isIntlCal && timeFilter && timeFilter !== 'all') {
+        filteredFlights = flights.filter(f => matchTimeSlot(f.dep_time, timeFilter, customRange));
+      }
+
+      const rows = filteredFlights.slice(0, maxRows).map(f => {
         const arrTz = typeof f.arr_tz_offset === 'number' ? f.arr_tz_offset : essTz;
         const timeComp = renderArrivalTimeComp(
           f.dep_time || '09:25',
@@ -2615,6 +3096,24 @@
         `;
       }).join('');
 
+      const hasCustomRange = customRange && customRange.key === 'custom';
+      const timeFiltersHtml = !isIntlCal ? `
+        <div class="widget-filters">
+          <button class="filter-pill ${timeFilter === 'all' ? 'active' : ''}" onclick="setFlightTimeFilter(${turnId}, 'all')">全部 (${flights.length})</button>
+          <button class="filter-pill ${timeFilter === 'morning' ? 'active' : ''}" onclick="setFlightTimeFilter(${turnId}, 'morning')">上午 (${countMorning})</button>
+          <button class="filter-pill ${timeFilter === 'afternoon' ? 'active' : ''}" onclick="setFlightTimeFilter(${turnId}, 'afternoon')">下午 (${countAfternoon})</button>
+          <button class="filter-pill ${timeFilter === 'evening' ? 'active' : ''}" onclick="setFlightTimeFilter(${turnId}, 'evening')">晚上 (${countEvening})</button>
+          ${hasCustomRange ? `<button class="filter-pill ${timeFilter === 'custom' ? 'active' : ''}" onclick="setFlightTimeFilter(${turnId}, 'custom')">${customRange.label}</button>` : ''}
+          ${showTrBtn ? `<span class="filter-divider"></span><button class="filter-pill" onclick="loadSmartTransfers(${turnId})"><i data-lucide="git-branch" style="width:11px;height:11px;"></i> 智能中转 / 空铁联运</button>` : ''}
+        </div>
+      ` : (showTrBtn ? `<button class="filter-pill" onclick="loadSmartTransfers(${turnId})"><i data-lucide="git-branch" style="width:11px;height:11px;"></i> 智能中转 / 空铁联运</button>` : '');
+
+      const emptyFlightHtml = !filteredFlights.length ? `
+        <div style="padding:18px;text-align:center;font-size:12.5px;color:var(--text-muted);">
+          当前时段暂无直飞航班 · <a href="javascript:void(0)" style="color:var(--accent);font-weight:600;text-decoration:none;" onclick="setFlightTimeFilter(${turnId}, 'all')">查看全天全部 ${flights.length} 趟航班</a>
+        </div>
+      ` : '';
+
       return `
         <div class="inline-widget">
           <div class="widget-header">
@@ -2622,11 +3121,23 @@
               <span class="widget-icon-badge"><i data-lucide="plane"></i></span>
               <span>${intent.from_city} → ${intent.to_city} · 机票 (${intent.date})</span>
             </div>
-            ${showTrBtn ? `<button class="filter-pill" onclick="loadSmartTransfers(${turnId})"><i data-lucide="git-branch" style="width:11px;height:11px;"></i> 智能中转 / 空铁联运</button>` : ''}
+            ${timeFiltersHtml}
           </div>
-          <div class="w-train-list">${rows}</div>
+          <div class="w-train-list">${rows || emptyFlightHtml}</div>
         </div>
       `;
+    }
+
+    function setFlightTimeFilter(turnId, timeKey) {
+      const st = turnStore[turnId];
+      if (!st) return;
+      st.flightTimeFilter = timeKey;
+      const destCurr = (st.essentials && st.essentials.currency) || 'CNY';
+      const el = document.getElementById(`flight-widget-${turnId}`);
+      if (el) {
+        el.innerHTML = buildFlightWidgetHtml(st.flights, st.intent, destCurr, turnId);
+        refreshIcons();
+      }
     }
 
     // Widget 2.2: Smart Multi-Modal Transfer (空铁联运 / 同站换乘 / 联程转机)
@@ -2732,9 +3243,13 @@
         const starText = h.star ? `${h.star}星/钻` : '精选';
         const scoreBadge = h.score ? `${h.score}分 ${h.score_desc || ''}` : '高分';
         const locText = [h.zone, h.position_desc].filter(Boolean).join(' · ') || h.address || '';
+        const safeName = (h.name || '').replace(/'/g, "\\'");
+        const focusAttr = (h.lat && h.lon)
+          ? `onclick="focusPlaceOnTurnMap(${turnId}, '${safeName}', ${h.lat}, ${h.lon}, 'hotel', ${h.price || 0})" style="cursor:pointer;" title="点击在地图上定位该酒店"`
+          : '';
         return `
           <div class="w-train-row" style="grid-template-columns: 1.5fr 100px 1.1fr 120px;">
-            <div class="wt-time-route">
+            <div class="wt-time-route" ${focusAttr}>
               <div class="wt-times" style="font-family:var(--font-sans);font-size:13.5px;">${h.name}</div>
               <div class="wt-stations"><i data-lucide="map-pin" style="width:12px;height:12px;color:var(--accent);"></i> <span>${locText}</span></div>
             </div>
@@ -2764,6 +3279,609 @@
           <div class="w-train-list">${rows}</div>
         </div>
       `;
+    }
+
+    // Widget 2.7: Global Attraction Tickets List
+    function buildAttractionWidgetHtml(attractions, attractionMeta, intent, destCurr, turnId) {
+      if (!attractions || !attractions.length) return '';
+      const meta = attractionMeta || {};
+      const city = meta.city || intent.attraction_city || intent.to_city || '';
+
+      const rows = attractions.slice(0, 6).map(a => {
+        const scoreBadge = a.score ? `${a.score}分` : '必去';
+        const rankText = a.rank_badge || (a.tags && a.tags[0]) || '热门打卡';
+        const safeName = (a.name || '').replace(/'/g, "\\'");
+        const focusAttr = (a.lat && a.lon)
+          ? `onclick="focusPlaceOnTurnMap(${turnId}, '${safeName}', ${a.lat}, ${a.lon}, 'attraction', ${a.price || 0})" style="cursor:pointer;" title="点击在地图上定位该景点"`
+          : '';
+        return `
+          <div class="w-train-row" style="grid-template-columns: 1.55fr 110px 1.15fr 115px;">
+            <div class="wt-time-route" ${focusAttr}>
+              <div class="wt-times" style="font-family:var(--font-sans);font-size:13.5px;">${a.name}</div>
+              <div class="wt-stations"><i data-lucide="compass" style="width:12px;height:12px;color:var(--accent);"></i> <span>${a.open_time || '常规开放'}${a.play_duration ? ` · ${a.play_duration}` : ''}</span></div>
+            </div>
+            <div>
+              <span class="seat-chip avail"><i data-lucide="award" style="width:11px;height:11px;"></i> ${scoreBadge}</span>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${rankText}</div>
+            </div>
+            <div class="wt-seats">
+              ${a.ticket_name ? `<span class="seat-chip">${a.ticket_name}</span>` : ''}
+              ${(a.features || []).slice(0, 1).map(f => `<span class="seat-chip">${f}</span>`).join('')}
+            </div>
+            <div style="text-align:right;">
+              <div class="wt-price">${a.is_free || !a.price ? '<span style="color:var(--green);font-size:13px;">免费开放</span>' : formatPriceHtml(a.price, destCurr, turnId)}</div>
+              ${a.sales ? `<div style="font-size:10.5px;color:var(--text-muted);">${a.sales}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="inline-widget">
+          <div class="widget-header">
+            <div class="widget-title">
+              <span class="widget-icon-badge"><i data-lucide="ticket"></i></span>
+              <span>${city} · 必去景点与门票实时价</span>
+            </div>
+          </div>
+          <div class="w-train-list">${rows}</div>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // Widget 2.9: Smart Interactive Route Map (Leaflet + OSRM + TSP + Arcs)
+    // =========================================================================
+    function ensureTurnMapUi(turnId) {
+      const st = turnStore[turnId];
+      if (!st) return null;
+      if (!st.mapUi) {
+        const rm = st.route_map || {};
+        st.mapUi = {
+          activeTab: rm.default_tab || (rm.has_city_route ? 'city_route' : (rm.has_stopovers ? 'stopovers' : 'intercity')),
+          tileMode: 'carto', // 'carto' | 'amap' | 'osm'
+          intercityGroup: 'all',
+          cityProfile: 'driving',
+          tspOptimized: true,
+          expanded: false,
+          activeDayLabel: ''
+        };
+      }
+      return st.mapUi;
+    }
+
+    function buildSmartMapWidgetHtml(turnId) {
+      const st = turnStore[turnId];
+      if (!st || !st.route_map || !st.route_map.ok) return '';
+      const rm = st.route_map;
+      const ui = ensureTurnMapUi(turnId);
+      const destCurr = (st.essentials && st.essentials.currency) || 'CNY';
+
+      // Ensure valid activeTab
+      if (ui.activeTab === 'city_route' && !rm.has_city_route) {
+        ui.activeTab = rm.has_intercity ? 'intercity' : 'stopovers';
+      } else if (ui.activeTab === 'intercity' && !rm.has_intercity) {
+        ui.activeTab = rm.has_city_route ? 'city_route' : 'stopovers';
+      } else if (ui.activeTab === 'stopovers' && !rm.has_stopovers) {
+        ui.activeTab = rm.has_city_route ? 'city_route' : 'intercity';
+      }
+
+      let titleText = '智能路线与导航地图';
+      if (ui.activeTab === 'intercity') {
+        const ic = rm.intercity || {};
+        titleText = `${ic.from_city || ''} → ${ic.to_city || ''} · 跨城航线与联程路网图`;
+      } else if (ui.activeTab === 'city_route') {
+        const cr = rm.city_route || {};
+        const dayTag = ui.activeDayLabel ? ` (${ui.activeDayLabel})` : '';
+        titleText = `${cr.city || st.intent.to_city || '目的地'}${dayTag} · 智能顺路游览线路图`;
+      } else if (ui.activeTab === 'stopovers') {
+        const sp = rm.stopovers || {};
+        titleText = `${sp.train_code || '列车'} · 沿途 ${(sp.points || []).length} 站经停轨迹图`;
+      }
+
+      // Layer switch tabs
+      const tabBtns = [];
+      if (rm.has_intercity) {
+        tabBtns.push(`<button class="filter-pill ${ui.activeTab === 'intercity' ? 'active' : ''}" onclick="switchMapTab(${turnId}, 'intercity')">🌏 跨城路网</button>`);
+      }
+      if (rm.has_city_route) {
+        const wps = (rm.city_route && rm.city_route.waypoints) || [];
+        tabBtns.push(`<button class="filter-pill ${ui.activeTab === 'city_route' ? 'active' : ''}" onclick="switchMapTab(${turnId}, 'city_route')">📍 当地顺路导航 (${wps.length}站)</button>`);
+      }
+      if (rm.has_stopovers) {
+        const sps = (rm.stopovers && rm.stopovers.points) || [];
+        tabBtns.push(`<button class="filter-pill ${ui.activeTab === 'stopovers' ? 'active' : ''}" onclick="switchMapTab(${turnId}, 'stopovers')">🚄 经停站轨迹 (${sps.length}站)</button>`);
+      }
+
+      // Sub-toolbar & Bottom strip content based on activeTab
+      let subbarHtml = '';
+      let stripHtml = '';
+
+      if (ui.activeTab === 'intercity') {
+        const ic = rm.intercity || {};
+        const groups = ic.route_groups || [];
+        const groupChips = [
+          `<button class="calc-preset-chip ${ui.intercityGroup === 'all' ? 'active' : ''}" onclick="switchIntercityGroup(${turnId}, 'all')">全部线路 (${groups.length})</button>`,
+          ...groups.map(g => `<button class="calc-preset-chip ${ui.intercityGroup === g.id ? 'active' : ''}" onclick="switchIntercityGroup(${turnId}, '${g.id}')" title="${g.summary || ''}">${g.label}</button>`)
+        ].join('');
+
+        subbarHtml = `
+          <div class="map-subbar">
+            <div class="map-subbar-group">${groupChips}</div>
+            <div class="map-subbar-group" style="font-size:11px;color:var(--text-secondary);">
+              <span style="color:var(--blue);font-weight:700;">━━ 高铁/铁路</span>
+              <span style="margin:0 4px;opacity:0.4;">|</span>
+              <span style="color:var(--accent);font-weight:700;">┅┅ 民航航线</span>
+            </div>
+          </div>
+        `;
+
+        const mks = ic.markers || [];
+        stripHtml = mks.map((m, idx) => `
+          <div class="map-node-pill ${m.category || ''}" onclick="flyToMapMarker(${turnId}, ${idx})">
+            <span class="num-circle">${idx + 1}</span>
+            <span>${m.name}</span>
+            ${m.price ? `<span style="color:var(--accent);font-family:var(--font-mono);">${formatConvertedValue(m.price, activeCurrency)}</span>` : `<span style="color:var(--text-muted);font-weight:400;">${m.badge || ''}</span>`}
+          </div>
+          ${idx < mks.length - 1 ? `<span class="map-leg-connector"><i data-lucide="arrow-right" style="width:11px;height:11px;"></i> 跨城联程</span>` : ''}
+        `).join('');
+      } else if (ui.activeTab === 'city_route') {
+        const cr = rm.city_route || {};
+        const wps = cr.waypoints || [];
+        const osrm = cr.osrm || {};
+        const tsp = cr.tsp_stats || {};
+        const legs = osrm.legs || [];
+
+        const savedBadge = (ui.tspOptimized && tsp.saved_km > 0.1)
+          ? `<span class="map-tsp-badge"><i data-lucide="sparkles" style="width:11px;height:11px;"></i> TSP顺路优化已省 ${tsp.saved_km}km (-${tsp.saved_pct}%)</span>`
+          : `<span class="map-tsp-badge"><i data-lucide="check-circle-2" style="width:11px;height:11px;"></i> ${osrm.source || 'OSRM 真实街道导航'}</span>`;
+
+        // If itinerary has days, allow 1-click day route switching
+        let dayButtonsHtml = '';
+        if (st.itinerary && st.itinerary.days && st.itinerary.days.length) {
+          dayButtonsHtml = st.itinerary.days.map((d, dIdx) => `
+            <button class="calc-preset-chip ${ui.activeDayLabel === `Day ${d.day}` ? 'active' : ''}" onclick="plotItineraryDayOnMap(${turnId}, ${dIdx})">
+              📅 Day ${d.day} 线路
+            </button>
+          `).join('');
+        }
+
+        subbarHtml = `
+          <div class="map-subbar">
+            <div class="map-subbar-group">
+              <button class="calc-preset-chip ${ui.cityProfile === 'driving' ? 'active' : ''}" onclick="changeCityRouteOptions(${turnId}, 'driving', ${ui.tspOptimized})">🚗 打车/驾车导航</button>
+              <button class="calc-preset-chip ${ui.cityProfile === 'foot' ? 'active' : ''}" onclick="changeCityRouteOptions(${turnId}, 'foot', ${ui.tspOptimized})">🚶 步行漫游</button>
+              <button class="calc-preset-chip ${ui.tspOptimized ? 'active' : ''}" onclick="changeCityRouteOptions(${turnId}, '${ui.cityProfile}', ${!ui.tspOptimized})" title="使用最近邻+2-Opt算法自动消除折返绕路">
+                ✨ ${ui.tspOptimized ? '智能顺路重排: 开' : '智能顺路重排: 关'}
+              </button>
+              ${dayButtonsHtml}
+            </div>
+            <div class="map-subbar-group">
+              ${osrm.total_distance_km ? `<span style="font-family:var(--font-mono);font-weight:700;color:var(--text-main);">全程 ${osrm.total_distance_km} km · 约 ${osrm.total_duration_mins || 15} 分钟</span>` : ''}
+              ${savedBadge}
+            </div>
+          </div>
+        `;
+
+        stripHtml = wps.map((p, idx) => {
+          const leg = legs[idx];
+          const legHtml = leg ? `
+            <span class="map-leg-connector" title="真实街道距离 ${leg.distance_km}km，驾车约 ${leg.drive_mins}分钟 / 步行约 ${leg.walk_mins}分钟">
+              ${ui.cityProfile === 'foot' ? '🚶' : '🚗'} ${leg.distance_km}km · ${leg.duration_mins}分钟 ▸
+            </span>
+          ` : '';
+          return `
+            <div class="map-node-pill ${p.category || ''}" onclick="flyToMapMarker(${turnId}, ${idx})">
+              <span class="num-circle">${idx + 1}</span>
+              <span>${p.name}</span>
+              ${p.price ? `<span style="color:var(--accent);font-family:var(--font-mono);">${formatConvertedValue(p.price, activeCurrency)}</span>` : ''}
+            </div>
+            ${legHtml}
+          `;
+        }).join('');
+      } else if (ui.activeTab === 'stopovers') {
+        const sp = rm.stopovers || {};
+        const pts = sp.points || [];
+        subbarHtml = `
+          <div class="map-subbar">
+            <div class="map-subbar-group">
+              <span class="map-tsp-badge"><i data-lucide="train-front" style="width:12px;height:12px;"></i> ${sp.train_code || '高铁'} 沿途停靠站空间轨迹（点击下方车站可在地图放大定位）</span>
+            </div>
+          </div>
+        `;
+        stripHtml = pts.map((p, idx) => `
+          <div class="map-node-pill origin" onclick="flyToMapMarker(${turnId}, ${idx})">
+            <span class="num-circle">${idx + 1}</span>
+            <span>${p.name}</span>
+          </div>
+          ${idx < pts.length - 1 ? `<span class="map-leg-connector">🚄 ▸</span>` : ''}
+        `).join('');
+      }
+
+      return `
+        <div class="inline-widget" id="map-widget-${turnId}">
+          <div class="widget-header">
+            <div class="widget-title">
+              <span class="widget-icon-badge"><i data-lucide="compass"></i></span>
+              <span>${titleText}</span>
+            </div>
+            <div class="widget-filters">
+              ${tabBtns.join('')}
+              <button class="filter-pill ${ui.tileMode === 'carto' ? 'active' : ''}" onclick="switchMapTile(${turnId}, 'carto')" title="全球矢量高清底图 (WGS84)">全球底图</button>
+              <button class="filter-pill ${ui.tileMode === 'amap' ? 'active' : ''}" onclick="switchMapTile(${turnId}, 'amap')" title="高德中文标准底图 (自动GCJ02坐标对齐)">高德中文</button>
+              <button class="filter-pill ${ui.tileMode === 'osm' ? 'active' : ''}" onclick="switchMapTile(${turnId}, 'osm')" title="OpenStreetMap 街景">OSM</button>
+              <button class="filter-pill" onclick="toggleMapExpand(${turnId})">${ui.expanded ? '收起' : '大图'}</button>
+            </div>
+          </div>
+          ${subbarHtml}
+          <div class="smart-map-canvas ${ui.expanded ? 'expanded' : ''}" id="leaflet-map-${turnId}"></div>
+          ${stripHtml ? `<div class="map-legs-strip">${stripHtml}</div>` : ''}
+        </div>
+      `;
+    }
+
+    function getMapPointLatLon(pt, tileMode) {
+      if (!pt) return [31.2304, 121.4737];
+      if (tileMode === 'amap' && pt.gcj_lat && pt.gcj_lon) {
+        return [pt.gcj_lat, pt.gcj_lon];
+      }
+      return [pt.lat, pt.lon];
+    }
+
+    function getMapGeomLatLons(item, tileMode) {
+      if (!item) return [];
+      if (tileMode === 'amap' && item.gcj_geometry && item.gcj_geometry.length) {
+        return item.gcj_geometry;
+      }
+      return item.geometry || [];
+    }
+
+    function initOrUpdateTurnLeafletMap(turnId) {
+      const st = turnStore[turnId];
+      if (!st || !st.route_map || !st.route_map.ok || !window.L) return;
+      const container = document.getElementById(`leaflet-map-${turnId}`);
+      if (!container) return;
+
+      if (st.leafletMap) {
+        try {
+          st.leafletMap.remove();
+        } catch (e) {}
+        st.leafletMap = null;
+      }
+
+      const rm = st.route_map;
+      const ui = ensureTurnMapUi(turnId);
+      const map = L.map(container, {
+        zoomControl: true,
+        attributionControl: false,
+        scrollWheelZoom: true
+      });
+      st.leafletMap = map;
+      st.leafletMarkers = [];
+
+      // Base Tile Layer
+      if (ui.tileMode === 'amap') {
+        L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+          subdomains: ['1', '2', '3', '4'],
+          maxZoom: 18
+        }).addTo(map);
+      } else if (ui.tileMode === 'osm') {
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19
+        }).addTo(map);
+      } else {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          subdomains: 'abcd',
+          maxZoom: 19
+        }).addTo(map);
+      }
+
+      const boundsPoints = [];
+
+      function addCustomPin(pt, displayIndex, customBadgeText) {
+        const latlon = getMapPointLatLon(pt, ui.tileMode);
+        boundsPoints.push(latlon);
+        const cat = pt.category || 'poi';
+        const priceHtml = pt.price
+          ? `<span class="pin-price">${formatConvertedValue(pt.price, activeCurrency)}</span>`
+          : '';
+        const badgeChar = customBadgeText || (displayIndex !== null ? displayIndex : '•');
+        const icon = L.divIcon({
+          className: 'custom-map-pin-icon',
+          html: `
+            <div class="map-pin-wrap">
+              <div class="map-pin-badge ${cat}">${badgeChar}</div>
+              <div class="map-pin-card">
+                <span>${pt.name}</span>
+                ${priceHtml}
+              </div>
+            </div>
+          `,
+          iconSize: [160, 32],
+          iconAnchor: [14, 14],
+          popupAnchor: [40, -10]
+        });
+
+        const popupHtml = `
+          <div style="min-width:170px;">
+            <div style="font-weight:700;font-size:13px;color:var(--text-main);margin-bottom:3px;">
+              ${displayIndex ? `<span style="color:var(--accent);">#${displayIndex}</span> ` : ''}${pt.name}
+            </div>
+            ${pt.subtitle ? `<div style="font-size:11.5px;color:var(--text-secondary);margin-bottom:4px;">${pt.subtitle}</div>` : ''}
+            ${pt.price ? `<div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent);">实时参考价：${formatConvertedValue(pt.price, activeCurrency)}${activeCurrency !== 'CNY' ? ` (¥${pt.price})` : ''}</div>` : ''}
+          </div>
+        `;
+        const mk = L.marker(latlon, { icon }).addTo(map).bindPopup(popupHtml);
+        st.leafletMarkers.push(mk);
+        return mk;
+      }
+
+      if (ui.activeTab === 'intercity') {
+        const ic = rm.intercity || {};
+        const arcs = (ic.arcs || []).filter(a => ui.intercityGroup === 'all' || a.group_id === ui.intercityGroup);
+        arcs.forEach(arc => {
+          const geom = getMapGeomLatLons(arc, ui.tileMode);
+          if (geom.length >= 2) {
+            geom.forEach(pt => boundsPoints.push(pt));
+            // Outer glow casing
+            L.polyline(geom, {
+              color: '#FFFFFF',
+              weight: 7,
+              opacity: 0.85
+            }).addTo(map);
+            // Main animated flowing route line
+            L.polyline(geom, {
+              color: arc.color || '#EA580C',
+              weight: 4,
+              opacity: 0.95,
+              dashArray: arc.dashed ? '9, 7' : '12, 6',
+              className: 'map-flow-line'
+            }).addTo(map).bindPopup(`<strong>${arc.label}</strong><br/><span style="font-size:11.5px;color:#525560;">${arc.detail || ''}</span>${arc.price ? `<br/><b style="color:#EA580C;">${formatConvertedValue(arc.price, activeCurrency)}</b>` : ''}`);
+
+            // Midpoint label badge on the curve
+            const midPt = geom[Math.floor(geom.length / 2)];
+            if (midPt) {
+              const midIcon = L.divIcon({
+                className: 'custom-map-pin-icon',
+                html: `<div class="map-arc-mid-label">${arc.label}${arc.price ? ` · ${formatConvertedValue(arc.price, activeCurrency)}` : ''}</div>`,
+                iconSize: [140, 22],
+                iconAnchor: [0, 0]
+              });
+              L.marker(midPt, { icon: midIcon, interactive: false }).addTo(map);
+            }
+          }
+        });
+
+        (ic.markers || []).forEach((m, idx) => {
+          const sym = m.category === 'origin' ? '起' : (m.category === 'destination' ? '终' : '转');
+          addCustomPin(m, idx + 1, sym);
+        });
+      } else if (ui.activeTab === 'city_route') {
+        const cr = rm.city_route || {};
+        const wps = cr.waypoints || [];
+        const osrm = cr.osrm || {};
+        const geom = getMapGeomLatLons(osrm, ui.tileMode);
+
+        if (geom.length >= 2) {
+          geom.forEach(pt => boundsPoints.push(pt));
+          // White road casing
+          L.polyline(geom, {
+            color: '#FFFFFF',
+            weight: 8,
+            opacity: 0.9,
+            lineCap: 'round',
+            lineJoin: 'round'
+          }).addTo(map);
+          // Solid base path
+          L.polyline(geom, {
+            color: ui.cityProfile === 'foot' ? '#059669' : '#1D4ED8',
+            weight: 4.5,
+            opacity: 0.45,
+            lineCap: 'round'
+          }).addTo(map);
+          // Animated directional flow stream
+          L.polyline(geom, {
+            color: ui.cityProfile === 'foot' ? '#059669' : '#EA580C',
+            weight: 4,
+            opacity: 0.95,
+            dashArray: '10, 8',
+            className: 'map-flow-line'
+          }).addTo(map);
+        }
+
+        wps.forEach((p, idx) => {
+          addCustomPin(p, idx + 1, String(idx + 1));
+        });
+      } else if (ui.activeTab === 'stopovers') {
+        const sp = rm.stopovers || {};
+        const pts = sp.points || [];
+        const lineCoords = pts.map(p => getMapPointLatLon(p, ui.tileMode));
+        if (lineCoords.length >= 2) {
+          L.polyline(lineCoords, {
+            color: '#FFFFFF',
+            weight: 7,
+            opacity: 0.9
+          }).addTo(map);
+          L.polyline(lineCoords, {
+            color: '#1D4ED8',
+            weight: 4,
+            opacity: 0.95,
+            dashArray: '10, 6',
+            className: 'map-flow-line'
+          }).addTo(map);
+        }
+        pts.forEach((p, idx) => {
+          addCustomPin(p, idx + 1, String(idx + 1));
+        });
+      }
+
+      if (boundsPoints.length >= 2) {
+        map.fitBounds(L.latLngBounds(boundsPoints), { padding: [36, 48], maxZoom: 15 });
+      } else if (boundsPoints.length === 1) {
+        map.setView(boundsPoints[0], 13);
+      }
+      setTimeout(() => {
+        try { map.invalidateSize(); } catch (e) {}
+      }, 120);
+    }
+
+    function rerenderTurnMapOnly(turnId) {
+      const box = document.getElementById(`map-widget-${turnId}`);
+      if (box) {
+        box.outerHTML = buildSmartMapWidgetHtml(turnId);
+        refreshIcons();
+        initOrUpdateTurnLeafletMap(turnId);
+      } else {
+        rerenderAllTurns();
+      }
+    }
+
+    function switchMapTab(turnId, tab) {
+      const ui = ensureTurnMapUi(turnId);
+      if (!ui) return;
+      ui.activeTab = tab;
+      rerenderTurnMapOnly(turnId);
+    }
+
+    function switchMapTile(turnId, tileMode) {
+      const ui = ensureTurnMapUi(turnId);
+      if (!ui) return;
+      ui.tileMode = tileMode;
+      rerenderTurnMapOnly(turnId);
+    }
+
+    function toggleMapExpand(turnId) {
+      const ui = ensureTurnMapUi(turnId);
+      if (!ui) return;
+      ui.expanded = !ui.expanded;
+      rerenderTurnMapOnly(turnId);
+    }
+
+    function switchIntercityGroup(turnId, gid) {
+      const ui = ensureTurnMapUi(turnId);
+      if (!ui) return;
+      ui.intercityGroup = gid;
+      rerenderTurnMapOnly(turnId);
+    }
+
+    async function changeCityRouteOptions(turnId, profile, optimizeTsp) {
+      const st = turnStore[turnId];
+      if (!st || !st.route_map || !st.route_map.city_route) return;
+      const ui = ensureTurnMapUi(turnId);
+      ui.cityProfile = profile;
+      ui.tspOptimized = optimizeTsp;
+
+      const cr = st.route_map.city_route;
+      const basePoints = cr.raw_waypoints || cr.waypoints || [];
+      if (!cr.raw_waypoints && cr.waypoints) {
+        cr.raw_waypoints = cr.waypoints.slice();
+      }
+
+      try {
+        const res = await fetch('/api/map/route', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            points: basePoints,
+            city: cr.city || st.intent.to_city || '',
+            profile: profile,
+            optimize_tsp: optimizeTsp,
+            fix_start: true
+          })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          cr.waypoints = data.waypoints;
+          cr.tsp_stats = data.tsp_stats;
+          cr.osrm = data.osrm;
+          rerenderTurnMapOnly(turnId);
+        }
+      } catch (e) {}
+    }
+
+    function flyToMapMarker(turnId, markerIdx) {
+      const st = turnStore[turnId];
+      if (!st || !st.leafletMap || !st.leafletMarkers) return;
+      const mk = st.leafletMarkers[markerIdx];
+      if (mk) {
+        const latlng = mk.getLatLng();
+        st.leafletMap.flyTo(latlng, Math.max(st.leafletMap.getZoom(), 14), { duration: 0.65 });
+        mk.openPopup();
+      }
+    }
+
+    function focusPlaceOnTurnMap(turnId, placeName, lat, lon, category, price) {
+      const st = turnStore[turnId];
+      if (!st || !st.route_map) return;
+      const ui = ensureTurnMapUi(turnId);
+      if (st.route_map.has_city_route && ui.activeTab !== 'city_route') {
+        ui.activeTab = 'city_route';
+        rerenderTurnMapOnly(turnId);
+      }
+      const mapEl = document.getElementById(`map-widget-${turnId}`);
+      if (mapEl) {
+        mapEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      if (st.leafletMap && st.leafletMarkers) {
+        const idx = ((st.route_map.city_route && st.route_map.city_route.waypoints) || []).findIndex(p => p.name === placeName);
+        if (idx !== -1 && st.leafletMarkers[idx]) {
+          flyToMapMarker(turnId, idx);
+          return;
+        }
+        const targetCoord = ui.tileMode === 'amap' ? [lat, lon] : [lat, lon];
+        st.leafletMap.flyTo(targetCoord, 15, { duration: 0.65 });
+      }
+    }
+
+    async function plotItineraryDayOnMap(turnId, dayIdx) {
+      const st = turnStore[turnId];
+      if (!st || !st.itinerary || !st.itinerary.days) return;
+      const dayObj = st.itinerary.days[dayIdx];
+      if (!dayObj || !dayObj.items || !dayObj.items.length) return;
+
+      const city = (st.route_map && st.route_map.city_route && st.route_map.city_route.city) || st.intent.to_city || st.intent.hotel_city || '';
+      const pts = dayObj.items.map(it => ({
+        name: (it.title || '').replace(/^(游览：|办理入住：|打卡：|前往：)/, '').trim(),
+        location: it.location || city,
+        subtitle: `${it.time || ''} · ${it.detail || ''}`,
+        price: it.cost || 0,
+        category: /入住|酒店|宾馆/.test(it.title || '') ? 'hotel' : 'attraction'
+      }));
+
+      try {
+        const ui = ensureTurnMapUi(turnId);
+        const res = await fetch('/api/map/route', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            points: pts,
+            city: city,
+            profile: ui.cityProfile || 'driving',
+            optimize_tsp: ui.tspOptimized,
+            fix_start: true
+          })
+        });
+        const data = await res.json();
+        if (data.ok && data.waypoints && data.waypoints.length) {
+          if (!st.route_map) {
+            st.route_map = { ok: true, has_intercity: false, has_city_route: true, has_stopovers: false, intercity: {}, stopovers: {}, city_route: {} };
+          }
+          st.route_map.ok = true;
+          st.route_map.has_city_route = true;
+          st.route_map.city_route = {
+            city: city,
+            waypoints: data.waypoints,
+            raw_waypoints: data.waypoints.slice(),
+            tsp_stats: data.tsp_stats,
+            osrm: data.osrm
+          };
+          ui.activeTab = 'city_route';
+          ui.activeDayLabel = `Day ${dayObj.day}`;
+          rerenderTurnMapOnly(turnId);
+          const mapEl = document.getElementById(`map-widget-${turnId}`);
+          if (mapEl) mapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } catch (e) {}
     }
 
     // Widget 3: Comparison
@@ -2826,9 +3944,15 @@
       if (!itinerary || !itinerary.days || !itinerary.days.length) return '';
       turnStore[turnId].itinerary = itinerary;
 
-      const daysHtml = itinerary.days.map(d => `
+      const daysHtml = itinerary.days.map((d, dIdx) => `
         <div class="it-day-block">
-          <div class="it-day-title">第 ${d.day} 天 (${d.date || ''}) · ${d.theme || ''}</div>
+          <div class="it-day-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <span>第 ${d.day} 天 (${d.date || ''}) · ${d.theme || ''}</span>
+            <button class="filter-pill" style="padding:2px 8px;font-size:11px;" onclick="plotItineraryDayOnMap(${turnId}, ${dIdx})">
+              <i data-lucide="compass" style="width:11px;height:11px;"></i>
+              <span>在地图画此日路线</span>
+            </button>
+          </div>
           ${(d.items || []).map(item => `
             <div class="it-node">
               <code>${item.time || ''}</code> <strong>${item.title || ''}</strong>
@@ -2869,6 +3993,7 @@
         const widgetsBox = document.getElementById(`widgets-${tid}`);
         if (widgetsBox) {
           widgetsBox.innerHTML = renderTurnWidgetsHtml(numId);
+          initOrUpdateTurnLeafletMap(numId);
         }
         if (st.rawReplyText) {
           const replyBox = document.getElementById(`reply-${tid}`);
@@ -2893,6 +4018,11 @@
       const destCurr = (st.essentials && st.essentials.currency) || 'CNY';
       let widgetsHtml = '';
 
+      // 1. Smart Interactive Route Map Widget (Top visual anchor!)
+      if (st.route_map && st.route_map.ok) {
+        widgetsHtml += buildSmartMapWidgetHtml(turnId);
+      }
+
       if (st.stopovers && st.stopovers.length) {
         widgetsHtml += buildStopoverWidgetHtml(st.stopovers, st.intent.train_code_query);
       } else {
@@ -2903,13 +4033,16 @@
           widgetsHtml += `<div id="train-widget-${turnId}">${buildTrainWidgetHtml(turnId)}</div>`;
         }
         if (st.flights && st.flights.length) {
-          widgetsHtml += buildFlightWidgetHtml(st.flights, st.intent, destCurr, turnId);
+          widgetsHtml += `<div id="flight-widget-${turnId}">${buildFlightWidgetHtml(st.flights, st.intent, destCurr, turnId)}</div>`;
         }
         if (st.transfers && st.transfers.length) {
           widgetsHtml += buildTransferWidgetHtml(st.transfers, st.intent, destCurr, turnId);
         }
         if (st.hotels && st.hotels.length) {
           widgetsHtml += buildHotelWidgetHtml(st.hotels, st.hotel_meta, st.intent, destCurr, turnId);
+        }
+        if (st.attractions && st.attractions.length) {
+          widgetsHtml += buildAttractionWidgetHtml(st.attractions, st.attraction_meta, st.intent, destCurr, turnId);
         }
       }
 
@@ -3015,17 +4148,26 @@
           renderCurrencyGrid();
         }
 
+        const initTimeRange = (toolData.intent && toolData.intent.time_range) || null;
         turnStore[turnId] = {
           intent: toolData.intent,
           trains: toolData.trains || [],
+          euro_trains: toolData.euro_trains || [],
           flights: toolData.flights || [],
           transfers: toolData.transfers || [],
           hotels: toolData.hotels || [],
           hotel_meta: toolData.hotel_meta || {},
+          attractions: toolData.attractions || [],
+          attraction_meta: toolData.attraction_meta || {},
+          global_passes: toolData.global_passes || [],
           stopovers: toolData.stopovers || [],
           comparison: toolData.comparison || null,
+          route_map: toolData.route_map || null,
           essentials: ess || null,
           trainFilter: 'all',
+          trainTimeFilter: (initTimeRange && initTimeRange.key) || 'all',
+          flightTimeFilter: (initTimeRange && initTimeRange.key) || 'all',
+          customTimeRange: initTimeRange,
           expandTrains: false
         };
 
@@ -3041,6 +4183,7 @@
         const widgetsBox = document.getElementById(`widgets-${turnId}`);
         widgetsBox.innerHTML = renderTurnWidgetsHtml(turnId);
         refreshIcons();
+        initOrUpdateTurnLeafletMap(turnId);
         scrollToBottom();
 
         if (window.gsap) {
@@ -3057,8 +4200,12 @@
              message: text,
              intent: toolData.intent,
              trains: toolData.trains || [],
+             euro_trains: toolData.euro_trains || [],
              flights: toolData.flights || [],
              hotels: toolData.hotels || [],
+             attractions: toolData.attractions || [],
+             global_passes: toolData.global_passes || [],
+             destination_essentials: toolData.destination_essentials || {},
              stopovers: toolData.stopovers || [],
              transfers: toolData.transfers || [],
              comparison: toolData.comparison,
@@ -3075,6 +4222,8 @@
          let finalHtml = formatSimpleMarkdown(replyData.reply || '', turnId);
          if (replyData.itinerary) {
            finalHtml += `<div id="itinerary-wrap-${turnId}">${buildItineraryWidgetHtml(replyData.itinerary, turnId)}</div>`;
+           // Re-render map header/subbar so Day 1 / Day 2 buttons appear
+           rerenderTurnMapOnly(turnId);
          }
          replyBox.innerHTML = finalHtml;
 

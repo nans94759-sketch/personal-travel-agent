@@ -221,7 +221,7 @@ def parse_user_intent(
             from_city = from_city or hits[0][1]
             to_city = to_city or hits[1][1]
         elif len(hits) == 1:
-            if any(k in msg_for_cities for k in ["去", "到", "飞", "前往", "至", "酒店", "宾馆", "住宿", "住哪", "民宿", "房价", "玩", "旅游", "攻略", "门票", "景点", "好玩", "必去", "迪士尼", "环球影城", "博物馆", "交通", "乘车券", "通票"]):
+            if any(k in msg_for_cities for k in ["去", "到", "飞", "前往", "至", "酒店", "宾馆", "住宿", "住哪", "民宿", "房价", "玩", "旅游", "攻略", "门票", "景点", "好玩", "必去", "迪士尼", "环球影城", "博物馆", "交通", "乘车券", "通票", "地图", "路线", "线路", "顺路", "行程", "规划"]):
                 to_city = to_city or hits[0][1]
             else:
                 from_city = from_city or hits[0][1]
@@ -365,7 +365,7 @@ def parse_user_intent(
         days
         or any(
             k in message
-            for k in ["行程", "攻略", "规划", "安排", "怎么玩", "游玩", "旅游", "度假", "美食"]
+            for k in ["行程", "攻略", "规划", "安排", "怎么玩", "游玩", "旅游", "度假", "美食", "路线图", "游玩路线", "画线路", "画路线", "顺路"]
         )
     )
     if not days:
@@ -399,6 +399,53 @@ def parse_user_intent(
     elif any(k in message for k in ["美食", "吃货", "探店", "拍照", "人文"]):
         style = "人文美食深度游"
 
+    # Extract time-of-day or hour range filter from user message (e.g. 上午, 下午, 晚上, 早上, 9点到12点, 14点后)
+    time_range = None
+    is_pm_hint = any(k in message for k in ["下午", "傍晚", "晚上", "夜间"])
+    m_hr_span = re.search(
+        r"(\d{1,2})(?:[:：](\d{2})|点(?:半)?|时)?\s*(?:到|至|-|~|—)\s*(\d{1,2})(?:[:：](\d{2})|点(?:半)?|时)",
+        message,
+    )
+    m_hr_after = re.search(r"(\d{1,2})(?:[:：](\d{2})|点|时)\s*(?:以后|之后|后)", message)
+    m_hr_before = re.search(r"(\d{1,2})(?:[:：](\d{2})|点|时)\s*(?:以前|之前|前)", message)
+
+    if m_hr_span:
+        h1, m1, h2, m2 = (
+            int(m_hr_span.group(1)),
+            int(m_hr_span.group(2) or 0),
+            int(m_hr_span.group(3)),
+            int(m_hr_span.group(4) or 0),
+        )
+        if is_pm_hint and h1 < 12:
+            h1 += 12
+        if (is_pm_hint or h2 < h1) and h2 <= 12:
+            h2 += 12
+        s_str = f"{min(23, h1):02d}:{min(59, m1):02d}"
+        e_str = f"{min(23, h2):02d}:{min(59, m2):02d}"
+        time_range = {"key": "custom", "label": f"{s_str}-{e_str}", "start": s_str, "end": e_str}
+    elif m_hr_after:
+        h1, m1 = int(m_hr_after.group(1)), int(m_hr_after.group(2) or 0)
+        if is_pm_hint and h1 < 12:
+            h1 += 12
+        s_str = f"{min(23, h1):02d}:{min(59, m1):02d}"
+        time_range = {"key": "custom", "label": f"{s_str}后", "start": s_str, "end": "23:59"}
+    elif m_hr_before:
+        h2, m2 = int(m_hr_before.group(1)), int(m_hr_before.group(2) or 0)
+        if is_pm_hint and h2 < 12:
+            h2 += 12
+        e_str = f"{min(23, h2):02d}:{min(59, m2):02d}"
+        time_range = {"key": "custom", "label": f"{e_str}前", "start": "00:00", "end": e_str}
+    elif any(k in message for k in ["早上", "清晨", "早班", "一早", "清早"]):
+        time_range = {"key": "morning", "label": "上午 06-12点", "start": "06:00", "end": "12:00"}
+    elif "上午" in message:
+        time_range = {"key": "morning", "label": "上午 06-12点", "start": "06:00", "end": "12:00"}
+    elif any(k in message for k in ["中午", "午间"]):
+        time_range = {"key": "noon", "label": "中午 11-14点", "start": "11:00", "end": "14:00"}
+    elif any(k in message for k in ["下午", "午后"]):
+        time_range = {"key": "afternoon", "label": "下午 12-18点", "start": "12:00", "end": "18:00"}
+    elif any(k in message for k in ["晚上", "傍晚", "夜间", "晚班", "夜里"]):
+        time_range = {"key": "evening", "label": "晚上 18-24点", "start": "18:00", "end": "23:59"}
+
     return {
         "from_city": from_city,
         "to_city": to_city,
@@ -408,6 +455,7 @@ def parse_user_intent(
         "days": days,
         "budget": budget,
         "style": style,
+        "time_range": time_range,
         "needs_itinerary": needs_itinerary,
         "only_train": only_train,
         "only_flight": only_flight,
@@ -644,13 +692,25 @@ def build_comparison_matrix(
     trains: List[Dict[str, Any]],
     flights: List[Dict[str, Any]],
     transfers: List[Dict[str, Any]],
+    time_range: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Build quantitative door-to-door comparison between High-Speed Rail, Flight, and Transfer."""
-    bookable_trains = [t for t in trains if t.get("can_buy") and t.get("lowest_price")]
+    tr_start = (time_range or {}).get("start")
+    tr_end = (time_range or {}).get("end")
+
+    def _in_window(dep_str: str) -> bool:
+        if not tr_start or not tr_end or not dep_str or len(dep_str) < 5:
+            return True
+        return tr_start <= dep_str[:5] <= tr_end
+
+    scoped_trains = [t for t in trains if _in_window(t.get("dep_time", ""))] or trains
+    scoped_flights = [f for f in flights if _in_window(f.get("dep_time", ""))] or flights
+
+    bookable_trains = [t for t in scoped_trains if t.get("can_buy") and t.get("lowest_price")]
     hsr_trains = [
         t for t in bookable_trains if t["train_code"].startswith(("G", "D", "C"))
     ]
-    candidate_trains = hsr_trains or bookable_trains or trains
+    candidate_trains = hsr_trains or bookable_trains or scoped_trains
 
     best_train = None
     fastest_train = None
@@ -668,7 +728,7 @@ def build_comparison_matrix(
             key=lambda x: x["duration_minutes"] + (x.get("lowest_price") or 500) * 0.35,
         )
 
-    valid_flights = [f for f in flights if f.get("lowest_price", 0) > 0]
+    valid_flights = [f for f in scoped_flights if f.get("lowest_price", 0) > 0]
     best_flight = None
     cheapest_flight = None
     fastest_flight = None
@@ -783,10 +843,12 @@ def generate_chat_response(
     date_str = intent.get("date", "")
     needs_itinerary = intent.get("needs_itinerary", False)
 
+    time_range = intent.get("time_range")
+
     # Summarize live tool results for the LLM context
     trains_brief = [
         f"{t['train_code']}({t['from_station']} {t['dep_time']}->{t['to_station']} {t['arr_time']}, 历时{t['duration_text']}, 最低¥{t['lowest_price']}, 余票:{'有票' if t['can_buy'] else '候补/无'}, 席别:{'/'.join(s['name']+str(s['price'])+'元('+s['available']+')' for s in t['seats'][:3])})"
-        for t in trains[:10]
+        for t in trains[:16]
     ]
     euro_trains_brief = [
         f"{et['train_code']}({et['from_station']} {et['dep_time']}->{et['to_station']} {et['arr_time']}, 历时{et['duration_text']}, 换乘{et.get('transfers', 0)}次, 运营商:{et.get('operators', '')})"
@@ -849,16 +911,17 @@ def generate_chat_response(
         )
     else:
         system_prompt = (
-            "你是一个极简、干练的全球票务、机票、跨国列车、酒店与景点门票 AI 助手。系统已经在你的回复气泡里内嵌展示了【实时车次表/欧洲铁路表/机票表/携程实时酒店房价表/全球景点门票与交通卡】可视化组件。\n"
-            "因此你不需要把所有列表再机械罗列一遍，而是直接针对用户的提问，基于真实数据给出最实用的挑选建议（例如：高性价比选哪家、必玩景点门票多少钱、外币折算多少、早班赶路选哪趟车/航班）。\n"
-            "严禁编造数据！直接输出精炼、好读的 Markdown 文本（控制在 120~240 字以内，条理清晰）。"
+            "你是一个极简、干练的全球票务、机票、跨国列车、酒店与景点门票 AI 助手。系统已经在你的回复气泡上方内嵌展示了【实时车次表/机票表/酒店表】交互式卡片组件。\n"
+            "因此你不需要再画 Markdown 表格，也不要用 ## 标题把列表机械重抄一遍；请直接用简明自然的分点列表（- ）和加粗重点（**...**），针对用户的提问给出最实用的挑选建议（如：首选哪趟、备选哪趟、余票与出发车站提醒）。\n"
+            "严禁编造数据！控制在 100~200 字以内，条理清晰。"
         )
 
+    time_range_str = f" | 指定出发时段：{time_range['label']} ({time_range['start']}~{time_range['end']})" if time_range else ""
     user_prompt = (
         f"{hist_text}\n"
         f"【当前用户提问】：{user_message}\n"
-        f"【解析路线参数】：{from_city} -> {to_city} (酒店城市: {hotel_city}, 景点城市: {attraction_city}) | 日期：{date_str} | 天数：{intent.get('days')}天\n"
-        f"【12306 实时检出车次（共{len(trains)}趟，前10趟明细）】：{json.dumps(trains_brief, ensure_ascii=False)}\n"
+        f"【解析路线参数】：{from_city} -> {to_city} (酒店城市: {hotel_city}, 景点城市: {attraction_city}) | 日期：{date_str}{time_range_str} | 天数：{intent.get('days')}天\n"
+        f"【12306 实时检出车次（共{len(trains)}趟，前16趟明细）】：{json.dumps(trains_brief, ensure_ascii=False)}\n"
         f"【欧洲跨国/城际铁路实时车次（共{len(euro_trains)}趟）】：{json.dumps(euro_trains_brief, ensure_ascii=False)}\n"
         f"【OTA 实时检出国内/国际航班（共{len(flights)}架次）】：{json.dumps(flights_brief, ensure_ascii=False)}\n"
         f"【智能中转方案（空铁联运/同站换乘/枢纽转机，共{len(transfers)}套）】：{json.dumps(transfers_brief, ensure_ascii=False)}\n"

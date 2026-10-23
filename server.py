@@ -32,6 +32,7 @@ from provider_global_transit import (
     GlobalTransitClient,
 )
 from provider_hotels import HotelScraperClient
+from provider_map import SmartRouteMapEngine
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -41,6 +42,7 @@ flight_client = FlightScraperClient()
 hotel_client = HotelScraperClient()
 attraction_client = GlobalAttractionClient()
 transit_client = GlobalTransitClient()
+map_engine = SmartRouteMapEngine()
 
 
 async def handle_index(request: web.Request) -> web.FileResponse:
@@ -360,7 +362,42 @@ async def handle_chat_tools(request: web.Request) -> web.Response:
                 }
             )
 
-    comparison = build_comparison_matrix(trains, flights, transfers)
+    comparison = build_comparison_matrix(trains, flights, transfers, intent.get("time_range"))
+
+    # Build Smart Route Map (Intercity Arcs + TSP Optimized City POI Street Route via OSRM)
+    route_map = await loop.run_in_executor(
+        None,
+        map_engine.build_turn_map_data,
+        intent,
+        trains,
+        euro_trains,
+        flights,
+        transfers,
+        stopovers,
+        hotels,
+        attractions,
+        comparison,
+    )
+    if route_map and route_map.get("ok"):
+        if route_map.get("has_city_route") and (route_map.get("city_route") or {}).get("waypoints"):
+            cr = route_map["city_route"]
+            km = (cr.get("osrm") or {}).get("total_distance_km") or 0
+            tool_badges.append(
+                {
+                    "tool": "map",
+                    "text": f"{cr.get('city') or attraction_city or to_city or hotel_city} 智能线路图",
+                    "count": f"{len(cr['waypoints'])} 站" + (f" · {km}km" if km else ""),
+                }
+            )
+        elif route_map.get("has_intercity"):
+            ic = route_map.get("intercity") or {}
+            tool_badges.append(
+                {
+                    "tool": "map",
+                    "text": f"{from_city} → {to_city} 路线地图",
+                    "count": f"{len(ic.get('route_groups') or [])} 条线路",
+                }
+            )
 
     # Generate smart contextual follow-up chips
     follow_ups = []
@@ -397,6 +434,7 @@ async def handle_chat_tools(request: web.Request) -> web.Response:
             "stopovers": stopovers,
             "transfers": transfers,
             "comparison": comparison,
+            "route_map": route_map,
             "follow_ups": follow_ups[:4],
         }
     )
@@ -456,13 +494,113 @@ async def handle_stopovers(request: web.Request) -> web.Response:
     to_code = request.query.get("to_code", "").strip()
     date_str = request.query.get("date", "").strip()
     if not (train_no and from_code and to_code and date_str):
-        return web.json_response({"ok": False, "stops": []})
+        return web.json_response({"ok": False, "stops": [], "map_points": []})
 
     loop = asyncio.get_running_loop()
     stops = await loop.run_in_executor(
         None, train_client.query_stopovers, train_no, from_code, to_code, date_str
     )
-    return web.json_response({"ok": True, "stops": stops})
+    map_points = await loop.run_in_executor(
+        None, map_engine.geocode_stopovers, stops
+    )
+    return web.json_response({"ok": True, "stops": stops, "map_points": map_points})
+
+
+async def handle_map_route(request: web.Request) -> web.Response:
+    """
+    Interactive Smart Route Re-calculation Endpoint:
+    Supports:
+    - Switching OSRM profile ('driving' vs 'foot')
+    - Toggling TSP route optimization (Nearest Neighbor + 2-Opt) vs original sequence
+    - Geocoding custom waypoints or Day-by-Day itinerary items on the fly
+    """
+    try:
+        body: Dict[str, Any] = await request.json()
+    except Exception:
+        body = {}
+
+    raw_points = body.get("points") or []
+    city_hint = (body.get("city") or "").strip()
+    profile = (body.get("profile") or "driving").strip()
+    optimize_tsp = bool(body.get("optimize_tsp", True))
+    fix_start = bool(body.get("fix_start", True))
+
+    def _compute() -> Dict[str, Any]:
+        resolved_pts: List[Dict[str, Any]] = []
+        for idx, pt in enumerate(raw_points[:12]):
+            if isinstance(pt, str):
+                name = pt.strip()
+                coord = map_engine.resolve_point(name, city_hint=city_hint, allow_network=True)
+                if coord:
+                    resolved_pts.append(
+                        map_engine.make_point_dict(
+                            name=name,
+                            lat=coord[0],
+                            lon=coord[1],
+                            category="itinerary",
+                            subtitle=city_hint or "行程打卡点",
+                            order_index=idx + 1,
+                        )
+                    )
+            elif isinstance(pt, dict):
+                name = (pt.get("name") or pt.get("title") or f"站点#{idx + 1}").strip()
+                lat = pt.get("lat")
+                lon = pt.get("lon")
+                if not (lat and lon):
+                    loc_q = pt.get("location") or name
+                    coord = map_engine.resolve_point(loc_q, city_hint=city_hint, allow_network=True)
+                    if not coord and loc_q != name:
+                        coord = map_engine.resolve_point(name, city_hint=city_hint, allow_network=True)
+                    if coord:
+                        lat, lon = coord
+                if lat and lon:
+                    resolved_pts.append(
+                        map_engine.make_point_dict(
+                            name=name,
+                            lat=float(lat),
+                            lon=float(lon),
+                            category=pt.get("category") or "itinerary",
+                            subtitle=pt.get("subtitle") or pt.get("detail") or pt.get("location") or "",
+                            price=pt.get("price") or pt.get("cost"),
+                            foreign_price=pt.get("foreign_price") or "",
+                            score=pt.get("score"),
+                            badge=pt.get("badge") or pt.get("time") or f"#{idx + 1}",
+                            order_index=idx + 1,
+                        )
+                    )
+
+        if len(resolved_pts) < 2:
+            return {
+                "ok": bool(resolved_pts),
+                "city": city_hint,
+                "waypoints": resolved_pts,
+                "tsp_stats": {"original_km": 0, "optimized_km": 0, "saved_km": 0, "saved_pct": 0},
+                "osrm": {"ok": False, "geometry": [], "gcj_geometry": [], "legs": [], "total_distance_km": 0, "total_duration_mins": 0},
+            }
+
+        if optimize_tsp:
+            ordered_pts, tsp_stats = map_engine.optimize_tsp_route(resolved_pts, fix_start=fix_start)
+        else:
+            ordered_pts = []
+            for rank, p in enumerate(resolved_pts):
+                cp = dict(p)
+                cp["order"] = rank + 1
+                ordered_pts.append(cp)
+            _, tsp_stats = map_engine.optimize_tsp_route(resolved_pts, fix_start=fix_start)
+
+        osrm_res = map_engine.fetch_osrm_route(ordered_pts, profile=profile)
+        return {
+            "ok": True,
+            "city": city_hint,
+            "optimized": optimize_tsp,
+            "waypoints": ordered_pts,
+            "tsp_stats": tsp_stats,
+            "osrm": osrm_res,
+        }
+
+    loop = asyncio.get_running_loop()
+    res = await loop.run_in_executor(None, _compute)
+    return web.json_response(res)
 
 
 async def handle_transfers(request: web.Request) -> web.Response:
@@ -518,6 +656,7 @@ def create_app() -> web.Application:
     app.router.add_post("/api/chat/reply", handle_chat_reply)
     app.router.add_get("/api/stopovers", handle_stopovers)
     app.router.add_get("/api/transfers", handle_transfers)
+    app.router.add_post("/api/map/route", handle_map_route)
     app.router.add_post("/api/export/ics", handle_export_ics)
     if os.path.exists(STATIC_DIR):
         app.router.add_static("/static", STATIC_DIR)
