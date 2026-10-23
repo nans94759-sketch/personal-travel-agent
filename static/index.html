@@ -970,8 +970,15 @@
       font-weight: 600;
     }
 
+    .seat-chip.low {
+      background: #FFF4EC;
+      color: var(--accent);
+      border: 1px solid rgba(234, 88, 12, 0.25);
+      font-weight: 700;
+    }
+
     .seat-chip.none {
-      opacity: 0.42;
+      opacity: 0.48;
       text-decoration: line-through;
     }
 
@@ -2412,6 +2419,27 @@
       }
     }
 
+    function formatSeatTicketBadge(availRaw, bookable) {
+      const s = String(availRaw || '').trim().toUpperCase();
+      if (!bookable || s === '无' || s === '0' || s === '--' || s === '*') {
+        return { cls: 'none', text: '无票', tip: '当前席位已售罄，可尝试候补或智能中转' };
+      }
+      if (/^\d+$/.test(s)) {
+        const n = parseInt(s, 10);
+        if (n <= 5) {
+          return { cls: 'low', text: `仅剩${n}张`, tip: `实时余票紧张，仅剩 ${n} 张` };
+        }
+        return { cls: 'avail', text: `余${n}张`, tip: `实时余票 ${n} 张` };
+      }
+      if (s === '有') {
+        return { cls: 'avail', text: '余票充足', tip: '12306 实时余票 ≥ 20 张' };
+      }
+      if (s === 'A') {
+        return { cls: 'avail', text: '余票充足', tip: '航司 GDS 实时余票 > 9 张' };
+      }
+      return { cls: 'avail', text: s || '有票', tip: '实时有票' };
+    }
+
     // Widget 1: Train List
     function buildTrainWidgetHtml(turnId) {
       const st = turnStore[turnId];
@@ -2429,9 +2457,9 @@
       const rowsHtml = visibleList.map((t, idx) => {
         const isHsr = /^[GDC]/.test(t.train_code);
         const seatsHtml = (t.seats || []).map(s => {
-          const cls = s.bookable ? 'avail' : 'none';
+          const badge = formatSeatTicketBadge(s.available, s.bookable);
           const p = s.price ? formatConvertedValue(s.price, activeCurrency) : '';
-          return `<span class="seat-chip ${cls}">${s.name} ${p}(${s.available})</span>`;
+          return `<span class="seat-chip ${badge.cls}" title="${badge.tip}">${s.name} ${p} · <b>${badge.text}</b></span>`;
         }).join('');
 
         return `
@@ -2556,6 +2584,17 @@
           intent.to_city,
           turnId
         );
+        let cabinsHtml = '';
+        if (f.cabins && f.cabins.length) {
+          cabinsHtml = f.cabins.map(c => {
+            const b = formatSeatTicketBadge(c.available || c.cabin_code || 'A', true);
+            const cp = c.price ? formatConvertedValue(c.price, activeCurrency) : '';
+            return `<span class="seat-chip ${b.cls}" title="${b.tip}">${c.desc} ${cp} · <b>${b.text}</b></span>`;
+          }).join('');
+        } else {
+          const b = formatSeatTicketBadge(f.available || 'A', true);
+          cabinsHtml = `<span class="seat-chip ${b.cls}" title="${b.tip}">${f.economy_desc}${f.is_international_calendar ? '' : ` · <b>${b.text}</b>`}</span>`;
+        }
         return `
           <div class="w-train-row" style="grid-template-columns: 98px 1.25fr 115px 1fr;">
             <div>
@@ -2568,7 +2607,7 @@
             </div>
             <div class="wt-price">${formatPriceHtml(f.lowest_price, destCurr, turnId)}</div>
             <div class="wt-seats">
-              <span class="seat-chip avail">${f.economy_desc}</span>
+              ${cabinsHtml}
               <span class="seat-chip">${f.aircraft || '客机'}</span>
               <span class="seat-chip">${f.meal}</span>
             </div>

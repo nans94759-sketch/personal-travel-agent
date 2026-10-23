@@ -564,7 +564,16 @@ class FlightScraperClient:
             except Exception:
                 lowest_price = 0
 
-            # Extract cabins (economy / business)
+            def _decode_gds_left(code_val: Any) -> str:
+                s = str(code_val or "").strip().upper()
+                if s.isdigit() and int(s) > 0:
+                    n = int(s)
+                    return f"仅剩{n}张" if n <= 5 else f"余{n}张"
+                if s == "A":
+                    return "余票充足"
+                return "有票"
+
+            # Extract cabins (economy / business) with GDS real-time remaining ticket counts
             cabins = []
             for c in item.get("cfts", []):
                 try:
@@ -572,15 +581,19 @@ class FlightScraperClient:
                 except Exception:
                     c_price = 0
                 if c_price > 0:
+                    iv_raw = str(c.get("iv") or "").strip()
                     cabins.append(
                         {
                             "desc": c.get("rd", "经济舱"),
                             "discount": f"{c.get('adr', '')}折" if c.get("adr") else "",
                             "price": c_price,
-                            "cabin_code": c.get("iv", ""),
+                            "cabin_code": iv_raw,
+                            "available": iv_raw or "A",
+                            "tickets_left": _decode_gds_left(iv_raw),
                         }
                     )
 
+            lcn_raw = str(item.get("lcn") or (cabins[0]["cabin_code"] if cabins else "A")).strip()
             sts = item.get("sts") or {}
             normalized.append(
                 {
@@ -604,6 +617,8 @@ class FlightScraperClient:
                     "duration_minutes": dur_mins,
                     "lowest_price": lowest_price,
                     "economy_desc": item.get("lcd", "经济舱"),
+                    "tickets_left": _decode_gds_left(lcn_raw),
+                    "available": lcn_raw,
                     "discount_rate": item.get("ldr", ""),
                     "business_price": item.get("lbcp") or None,
                     "business_desc": item.get("lbcd", ""),
