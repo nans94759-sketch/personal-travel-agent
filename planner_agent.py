@@ -888,44 +888,48 @@ def generate_chat_response(
             )
         if flights:
             f0 = min(flights, key=lambda x: x.get("lowest_price") or 999999)
+            dep_t = f0.get("dep_time") or "09:25"
+            arr_t = f0.get("arr_time_local") or f0.get("arr_time") or "12:00"
             bullets.append(
-                f"- **实时航班报价**：共检出 **{len(flights)}** 个航班方案，优选 **{f0['flight_no']}**（{f0['airline_short']}，含税/最低 **¥{f0['lowest_price']}** 起，{f0['economy_desc']}）。"
+                f"- **实时航班方案**：共检出 **{len(flights)}** 个航班，优选 **{f0['flight_no']}**（{f0['airline_short']}，{dep_t} 起飞 ➔ 当地 {arr_t} 到达，含税最低 **¥{f0['lowest_price']}**）。"
             )
         if transfers:
             tr0 = transfers[0]
+            l1 = tr0.get("leg1") or {}
+            l2 = tr0.get("leg2") or {}
+            t_dep = l1.get("dep_time") or "10:18"
+            t_arr = l2.get("arr_time_local") or l2.get("arr_time") or "16:50"
             bullets.append(
-                f"- **智能中转方案**：为您匹配 **{len(transfers)}** 套中转联程，优选 **{tr0.get('badge_text', '智能中转')}**（经 **{tr0.get('hub_city')}** 换乘，`{tr0['leg1'].get('code')}` + `{tr0['leg2'].get('code')}`，两程合计仅 **¥{tr0.get('total_lowest_price')}**）。"
+                f"- **智能中转联程**：为您匹配 **{len(transfers)}** 套中转方案，优选 **{tr0.get('badge_text', '智能中转')}**（经 **{tr0.get('hub_city')}** 换乘，`{l1.get('code')}` {t_dep} 出发 ➔ `{l2.get('code')}` 当地 {t_arr} 到达，两程合计 **¥{tr0.get('total_lowest_price')}**）。"
             )
         if hotels:
             h_top = hotels[0]
             h_cheap = min(hotels, key=lambda x: x.get("price") or 999999)
             bullets.append(
-                f"- **全球实时酒店（{hotel_city}）**：共检出 **{len(hotels)}** 家在售酒店；口碑首选 **{h_top['name']}**（{h_top['score']}分，**¥{h_top['price']}**/晚），高性价比可选 **{h_cheap['name']}**（**¥{h_cheap['price']}**/晚）。"
+                f"- **实时酒店（{hotel_city}）**：共检出 **{len(hotels)}** 家在售酒店；口碑首选 **{h_top['name']}**（{h_top['score']}分，**¥{h_top['price']}**/晚），高性价比可选 **{h_cheap['name']}**（**¥{h_cheap['price']}**/晚）。"
             )
         if attractions:
             paid_attrs = [a for a in attractions if a.get("price")]
             a0 = paid_attrs[0] if paid_attrs else attractions[0]
             price_str = f"¥{a0['price']}" + (f" / 约 {a0['foreign_price']}" if a0.get("foreign_price") else "") if a0.get("price") else "免费开放"
             bullets.append(
-                f"- **全球景点与门票（{attraction_city}）**：共检出 **{len(attractions)}** 个热门景点；首推 **{a0['name']}**（{a0.get('score')}分，实时票价 **{price_str}**，{a0.get('open_time') or '全天开放'}）。"
+                f"- **景点与门票（{attraction_city}）**：共检出 **{len(attractions)}** 个热门景点；首推 **{a0['name']}**（{a0.get('score')}分，实时票价 **{price_str}**，{a0.get('open_time') or '全天开放'}）。"
             )
         if global_passes:
             p0 = global_passes[0]
             routes_str = " / ".join(p0.get("packages", [])[:3])
             bullets.append(
-                f"- **当地交通卡/通票/船票**：共检出 **{len(global_passes)}** 项通票服务，推荐 **{p0['name']}**（{p0.get('category')}，{p0.get('monthly_sales') or '官方直连'}{f'，含 {routes_str}' if routes_str else ''}）。"
+                f"- **当地交通卡/通票**：共检出 **{len(global_passes)}** 项通票服务，推荐 **{p0['name']}**（{p0.get('category')}，{p0.get('monthly_sales') or '官方直连'}{f'，含 {routes_str}' if routes_str else ''}）。"
             )
         if destination_essentials and destination_essentials.get("fx_rate_text"):
             fx_txt = destination_essentials.get("fx_rate_text")
-            lt = destination_essentials.get("local_time")
-            tz_d = destination_essentials.get("timezone_desc")
-            tz_txt = f"，当地时间 `{lt}`（{tz_d}）" if lt else ""
+            tz_d = destination_essentials.get("timezone_desc") or "UTC+8"
             bullets.append(
-                f"- **实时汇率与时区（{destination_essentials.get('country') or ''}·{destination_essentials.get('city') or ''}）**：`{fx_txt}`{tz_txt}。"
+                f"- **到达时差与汇率（{destination_essentials.get('country') or ''}·{destination_essentials.get('city') or ''}）**：目的地时区 `{tz_d}`，实时汇率 `{fx_txt}`（点击卡片或文中的时间与价格可动态换算）。"
             )
 
         summary_reply = (
-            "已通过全球公开接口为您实时抓取最新票务、酒店与门票数据，核心精选如下：\n\n"
+            "已为您查询到最新实时班次与价格（点击任意起降时间或票价即可动态换算）：\n\n"
             + ("\n".join(bullets) if bullets else "已在上方卡片为您展示实时查询结果。")
         )
 

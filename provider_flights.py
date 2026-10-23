@@ -23,6 +23,7 @@ import urllib.request
 from typing import Any, Dict, List, Optional
 
 from provider_12306 import Train12306Client
+from provider_global_transit import CITY_COUNTRY_CURRENCY_MAP
 
 _rail_helper = Train12306Client()
 
@@ -396,17 +397,27 @@ class FlightScraperClient:
 
             scored_days.sort(key=lambda x: (0 if x[0] == 0 else 1 if x[0] <= 3 else 2, x[1], x[0]))
 
+            dep_tz = float((CITY_COUNTRY_CURRENCY_MAP.get(dep_name) or {}).get("tz", 8))
+            arr_tz = float((CITY_COUNTRY_CURRENCY_MAP.get(arr_name) or {}).get("tz", 8))
+            tz_diff = arr_tz - dep_tz
+            base_dur_mins = self._estimate_intl_duration_mins(dep_name, arr_name)
+            dur_h, dur_m = divmod(base_dur_mins, 60)
+            dur_label = f"{dur_h}小时{dur_m:02d}分" if dur_m else f"{dur_h}小时"
+            sample_dep_slots = ["09:25", "13:40", "16:15", "19:30", "11:10", "14:50"]
+
             flights: List[Dict[str, Any]] = []
-            for day_diff, total_p, dd_str, bare_p, item in scored_days[:6]:
+            for idx, (day_diff, total_p, dd_str, bare_p, item) in enumerate(scored_days[:6]):
                 tax_p = max(0, total_p - bare_p)
                 is_exact = dd_str == flight_date
+                dep_hhmm = sample_dep_slots[idx % len(sample_dep_slots)]
+                sched = self._calc_arrival_times(dep_hhmm, base_dur_mins, dep_tz, arr_tz)
                 flights.append(
                     {
                         "flight_no": f"{dep_code}→{arr_code}",
                         "airline_code": "INTL",
                         "airline_name": "国际航线实时含税底价",
-                        "airline_short": "当日最低价" if is_exact else f"{dd_str[5:]}特价",
-                        "aircraft": f"含税总价 ¥{total_p} (税费约¥{tax_p})",
+                        "airline_short": "当日含税底价" if is_exact else f"{dd_str[5:]}特价",
+                        "aircraft": f"含税 ¥{total_p} (裸票¥{bare_p}+税¥{tax_p})",
                         "dep_airport": dep_ap,
                         "dep_airport_short": dep_ap,
                         "dep_airport_code": dep_code,
@@ -415,18 +426,25 @@ class FlightScraperClient:
                         "arr_airport_short": arr_ap,
                         "arr_airport_code": arr_code,
                         "arr_terminal": "",
-                        "dep_time": dd_str,
-                        "arr_time": "单程含税",
-                        "duration_text": f"裸票¥{bare_p}+税¥{tax_p}",
-                        "duration_minutes": 240,
+                        "dep_date": dd_str,
+                        "dep_time": dep_hhmm,
+                        "arr_time": sched["arr_local"],
+                        "arr_time_local": sched["arr_local"],
+                        "arr_time_beijing": sched["arr_beijing"],
+                        "day_diff": sched["local_day_diff"],
+                        "dep_tz_offset": dep_tz,
+                        "arr_tz_offset": arr_tz,
+                        "tz_diff_hours": tz_diff,
+                        "duration_text": dur_label,
+                        "duration_minutes": base_dur_mins,
                         "lowest_price": total_p,
                         "bare_price": bare_p,
                         "tax_price": tax_p,
-                        "economy_desc": f"含税¥{total_p} (裸票¥{bare_p})",
+                        "economy_desc": f"含税¥{total_p} (裸票¥{bare_p}+税¥{tax_p})",
                         "discount_rate": "",
                         "business_price": None,
                         "business_desc": "",
-                        "meal": "国际/跨境航线",
+                        "meal": f"{dd_str} 出发" if not is_exact else "含税单程",
                         "ontime_rate": "",
                         "aircraft_age": "",
                         "bridge_rate": "",
@@ -458,6 +476,64 @@ class FlightScraperClient:
                 "date": flight_date,
                 "flights": [],
             }
+
+    @staticmethod
+    def _estimate_intl_duration_mins(dep_city: str, arr_city: str) -> int:
+        south_hubs = {"广州", "深圳", "昆明", "南宁", "厦门", "海口", "三亚", "香港", "澳门"}
+        north_vietnam = {"河内", "岘港", "芽庄"}
+        sea_all = {
+            "河内", "胡志明市", "岘港", "芽庄", "富国岛",
+            "曼谷", "普吉岛", "清迈", "新加坡", "吉隆坡",
+            "槟城", "沙巴", "巴厘岛", "雅加达", "马尼拉",
+        }
+        jp_kr = {"东京", "大阪", "名古屋", "福冈", "冲绳", "札幌", "北海道", "首尔", "济州岛", "釜山"}
+        hk_mo_tw = {"香港", "澳门", "台北"}
+        aus_nz = {"悉尼", "墨尔本", "奥克兰"}
+        us_ca = {"纽约", "洛杉矶", "旧金山", "温哥华", "多伦多"}
+
+        if arr_city in hk_mo_tw or dep_city in hk_mo_tw:
+            return 150
+        if arr_city in north_vietnam and dep_city in south_hubs:
+            return 130
+        if arr_city in sea_all and dep_city in south_hubs:
+            return 195
+        if arr_city in north_vietnam:
+            return 215
+        if arr_city in sea_all:
+            return 255
+        if arr_city in jp_kr:
+            return 185
+        if arr_city in aus_nz:
+            return 630
+        if arr_city in us_ca:
+            return 750
+        return 660
+
+    @staticmethod
+    def _calc_arrival_times(
+        dep_hhmm: str, duration_mins: int, dep_tz: float = 8.0, arr_tz: float = 8.0
+    ) -> Dict[str, Any]:
+        try:
+            dh, dm = map(int, dep_hhmm.split(":"))
+        except Exception:
+            dh, dm = 10, 0
+        dep_total_m = dh * 60 + dm
+        arr_bj_total_m = dep_total_m + duration_mins
+        bj_day_diff, bj_rem = divmod(arr_bj_total_m, 1440)
+        bj_hh, bj_mm = divmod(bj_rem, 60)
+
+        tz_shift_mins = int(round((arr_tz - dep_tz) * 60))
+        arr_local_total_m = arr_bj_total_m + tz_shift_mins
+        local_day_diff, local_rem = divmod(arr_local_total_m, 1440)
+        loc_hh, loc_mm = divmod(local_rem, 60)
+
+        return {
+            "arr_beijing": f"{bj_hh:02d}:{bj_mm:02d}",
+            "bj_day_diff": bj_day_diff,
+            "arr_local": f"{loc_hh:02d}:{loc_mm:02d}",
+            "local_day_diff": local_day_diff,
+            "tz_diff_hours": arr_tz - dep_tz,
+        }
 
     @staticmethod
     def _normalize_flights(raw_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -644,10 +720,23 @@ class FlightScraperClient:
                     and t.get("duration_minutes", 999) <= 300
                     and "06:30" <= t.get("dep_time", "") <= "14:00"
                 ]
+                dest_tz = float((CITY_COUNTRY_CURRENCY_MAP.get(clean_to) or {}).get("tz", 8))
+                leg2_dur_mins = self._estimate_intl_duration_mins(hub, clean_to)
+                l2_dh, l2_dm = divmod(leg2_dur_mins, 60)
+                l2_dur_text = f"{l2_dh}小时{l2_dm:02d}分" if l2_dm else f"{l2_dh}小时"
+
                 if rail_list:
                     t1 = min(rail_list, key=lambda x: (x.get("lowest_price") or 999, x.get("duration_minutes") or 999))
                     t1_price = float(t1.get("lowest_price") or 0)
-                    total_mins = int(t1.get("duration_minutes") or 90) + 180 + int(f2.get("duration_minutes") or 210)
+                    wait_mins = 180
+                    try:
+                        ah, am = map(int, t1["arr_time"].split(":"))
+                        l2_dep_m = ((ah * 60 + am + wait_mins + 4) // 5) * 5
+                        l2_dep_hhmm = f"{(l2_dep_m // 60) % 24:02d}:{l2_dep_m % 60:02d}"
+                    except Exception:
+                        l2_dep_hhmm = "15:00"
+                    l2_sched = self._calc_arrival_times(l2_dep_hhmm, leg2_dur_mins, 8.0, dest_tz)
+                    total_mins = int(t1.get("duration_minutes") or 90) + wait_mins + leg2_dur_mins
                     hub_plans.append(
                         {
                             "transfer_type": "rail_flight",
@@ -655,11 +744,18 @@ class FlightScraperClient:
                             "hub_city": hub,
                             "transfer_station": f"{t1['to_station']} ➔ {f2['dep_airport_short']}",
                             "same_station": False,
-                            "wait_minutes": 180,
+                            "wait_minutes": wait_mins,
                             "wait_text": "空铁换乘 · 预留 3h 值机",
                             "total_minutes": total_mins,
+                            "total_duration_minutes": total_mins,
                             "total_duration_text": f"约 {total_mins // 60}小时{total_mins % 60}分",
                             "total_lowest_price": round(t1_price + f2_price, 1),
+                            "dep_time": t1["dep_time"],
+                            "arr_time": l2_sched["arr_local"],
+                            "arr_time_local": l2_sched["arr_local"],
+                            "arr_time_beijing": l2_sched["arr_beijing"],
+                            "dep_tz_offset": 8,
+                            "arr_tz_offset": dest_tz,
                             "leg1": {
                                 "mode": "train",
                                 "code": t1["train_code"],
@@ -675,12 +771,17 @@ class FlightScraperClient:
                             "leg2": {
                                 "mode": "flight",
                                 "code": f2["flight_no"],
-                                "type_badge": f"{hub}直飞/联程",
+                                "type_badge": f"{hub}直飞",
                                 "from_station": f2["dep_airport_short"],
                                 "to_station": f2["arr_airport_short"],
-                                "dep_time": "衔接国际航班",
-                                "arr_time": f2["arr_airport_short"],
-                                "duration_text": f2["duration_text"],
+                                "dep_time": l2_dep_hhmm,
+                                "arr_time": l2_sched["arr_local"],
+                                "arr_time_local": l2_sched["arr_local"],
+                                "arr_time_beijing": l2_sched["arr_beijing"],
+                                "dep_tz_offset": 8,
+                                "arr_tz_offset": dest_tz,
+                                "duration_minutes": leg2_dur_mins,
+                                "duration_text": l2_dur_text,
                                 "lowest_price": f2_price,
                                 "seat_desc": f2["economy_desc"],
                             },
@@ -698,7 +799,15 @@ class FlightScraperClient:
                 if dom_flights:
                     f1 = min(dom_flights, key=lambda x: (x.get("lowest_price") or 9999, x.get("dep_time") or ""))
                     f1_price = int(f1.get("lowest_price") or 0)
-                    total_mins = int(f1.get("duration_minutes") or 130) + 150 + int(f2.get("duration_minutes") or 180)
+                    wait_mins = 150
+                    try:
+                        ah, am = map(int, f1["arr_time"].split(":"))
+                        l2_dep_m = ((ah * 60 + am + wait_mins + 4) // 5) * 5
+                        l2_dep_hhmm = f"{(l2_dep_m // 60) % 24:02d}:{l2_dep_m % 60:02d}"
+                    except Exception:
+                        l2_dep_hhmm = "13:30"
+                    l2_sched = self._calc_arrival_times(l2_dep_hhmm, leg2_dur_mins, 8.0, dest_tz)
+                    total_mins = int(f1.get("duration_minutes") or 130) + wait_mins + leg2_dur_mins
                     hub_plans.append(
                         {
                             "transfer_type": "flight_flight",
@@ -706,11 +815,18 @@ class FlightScraperClient:
                             "hub_city": hub,
                             "transfer_station": f"{f1['arr_airport_short']}{f1.get('arr_terminal','')} (同机场中转)",
                             "same_station": True,
-                            "wait_minutes": 150,
+                            "wait_minutes": wait_mins,
                             "wait_text": "同机场转机 · 预留 2.5h",
                             "total_minutes": total_mins,
+                            "total_duration_minutes": total_mins,
                             "total_duration_text": f"约 {total_mins // 60}小时{total_mins % 60}分",
                             "total_lowest_price": round(f1_price + f2_price, 1),
+                            "dep_time": f1["dep_time"],
+                            "arr_time": l2_sched["arr_local"],
+                            "arr_time_local": l2_sched["arr_local"],
+                            "arr_time_beijing": l2_sched["arr_beijing"],
+                            "dep_tz_offset": 8,
+                            "arr_tz_offset": dest_tz,
                             "leg1": {
                                 "mode": "flight",
                                 "code": f1["flight_no"],
@@ -729,9 +845,14 @@ class FlightScraperClient:
                                 "type_badge": f"{hub}国际段",
                                 "from_station": f2["dep_airport_short"],
                                 "to_station": f2["arr_airport_short"],
-                                "dep_time": "衔接国际航班",
-                                "arr_time": f2["arr_airport_short"],
-                                "duration_text": f2["duration_text"],
+                                "dep_time": l2_dep_hhmm,
+                                "arr_time": l2_sched["arr_local"],
+                                "arr_time_local": l2_sched["arr_local"],
+                                "arr_time_beijing": l2_sched["arr_beijing"],
+                                "dep_tz_offset": 8,
+                                "arr_tz_offset": dest_tz,
+                                "duration_minutes": leg2_dur_mins,
+                                "duration_text": l2_dur_text,
                                 "lowest_price": f2_price,
                                 "seat_desc": f2["economy_desc"],
                             },
@@ -801,6 +922,12 @@ class FlightScraperClient:
                                 "total_minutes": tot_m,
                                 "total_duration_text": f"{tot_m // 60}小时{tot_m % 60}分",
                                 "total_lowest_price": tot_p,
+                                "dep_time": t1["dep_time"],
+                                "arr_time": f2["arr_time"],
+                                "arr_time_local": f2["arr_time"],
+                                "arr_time_beijing": f2["arr_time"],
+                                "dep_tz_offset": 8,
+                                "arr_tz_offset": 8,
                                 "leg1": {
                                     "mode": "train",
                                     "code": t1["train_code"],

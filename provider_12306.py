@@ -539,6 +539,12 @@ class Train12306Client:
                                 "total_minutes": total_mins,
                                 "total_duration_text": f"{total_mins // 60}小时{total_mins % 60}分",
                                 "total_lowest_price": round(total_price, 1),
+                                "dep_time": t1["dep_time"],
+                                "arr_time": t2["arr_time"],
+                                "arr_time_local": t2["arr_time"],
+                                "arr_time_beijing": t2["arr_time"],
+                                "dep_tz_offset": 8,
+                                "arr_tz_offset": 8,
                                 "leg1": {
                                     **t1,
                                     "mode": "train",

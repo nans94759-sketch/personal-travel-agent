@@ -511,44 +511,229 @@
       line-height: 1.4;
     }
 
-    /* Destination Timezone & FX Banner inside Chat Card */
-    .dest-fx-tz-bar {
+    /* In-Chat Dynamic Time & Currency Component */
+    .turn-calc-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 12px;
+      padding: 12px 15px;
+      background: var(--bg-card-solid);
+    }
+
+    .calc-panel {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .calc-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-weight: 700;
+      color: var(--text-main);
+      font-size: 12.5px;
+    }
+
+    .calc-panel-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .calc-panel-title svg {
+      width: 15px;
+      height: 15px;
+      color: var(--accent);
+    }
+
+    .calc-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .calc-preset-chip {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: #fff;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .calc-preset-chip:hover,
+    .calc-preset-chip.active {
+      background: var(--obsidian);
+      color: #fff;
+      border-color: var(--obsidian);
+    }
+
+    .calc-controls-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .calc-field-label {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .calc-input,
+    .calc-select {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 7px;
+      border: 1px solid var(--border-strong);
+      background: #fff;
+      color: var(--text-main);
+      outline: none;
+    }
+
+    .calc-select {
+      font-family: var(--font-sans);
+      font-weight: 500;
+      font-size: 11.5px;
+    }
+
+    .calc-input.num-xs {
+      width: 46px;
+      text-align: center;
+    }
+
+    .calc-input.num-sm {
+      width: 78px;
+    }
+
+    .calc-input:focus,
+    .calc-select:focus {
+      border-color: var(--accent);
+    }
+
+    .calc-result-banner {
+      background: #fff;
+      border: 1px solid rgba(234, 88, 12, 0.22);
+      border-radius: 9px;
+      padding: 8px 11px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 10px;
-      padding: 10px 14px;
-      border-radius: 12px;
-      background: linear-gradient(90deg, #FFF7ED 0%, #F0FDF4 100%);
-      border: 1px solid rgba(234, 88, 12, 0.18);
-      font-size: 12.5px;
+      gap: 8px;
     }
 
-    .dest-fx-tz-items {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 14px;
+    .calc-result-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
     }
 
-    .dest-fx-tz-item {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--text-main);
-    }
-
-    .dest-fx-tz-item .lucide {
-      width: 14px;
-      height: 14px;
+    .calc-result-main {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      font-weight: 700;
       color: var(--accent);
     }
 
-    .dest-fx-tz-actions {
-      display: flex;
+    /* Interactive Time & Currency Pills inside Cards & Chat Text */
+    .tz-inline-pill {
+      display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 3px;
+      font-family: var(--font-sans);
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid rgba(234, 88, 12, 0.2);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tz-inline-pill:hover {
+      background: var(--obsidian);
+      color: #fff;
+      border-color: var(--obsidian);
+    }
+
+    .wt-price-btn {
+      cursor: pointer;
+      display: inline-block;
+      padding: 3px 7px;
+      border-radius: 8px;
+      transition: background 0.15s;
+    }
+
+    .wt-price-btn:hover {
+      background: var(--accent-soft);
+    }
+
+    .chat-fx-chip,
+    .chat-time-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 1px 7px;
+      margin: 0 2px;
+      border-radius: 6px;
+      cursor: pointer;
+      vertical-align: baseline;
+      transition: all 0.15s;
+    }
+
+    .chat-fx-chip {
+      background: #FFF4EC;
+      color: var(--accent);
+      border: 1px solid rgba(234, 88, 12, 0.25);
+    }
+
+    .chat-fx-chip small {
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .chat-fx-chip:hover {
+      background: var(--obsidian);
+      color: #fff;
+      border-color: var(--obsidian);
+    }
+
+    .chat-fx-chip:hover small {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .chat-time-chip {
+      background: var(--blue-bg);
+      color: var(--blue);
+      border: 1px solid rgba(29, 78, 216, 0.2);
+    }
+
+    .chat-time-chip:hover {
+      background: var(--obsidian);
+      color: #fff;
+      border-color: var(--obsidian);
     }
 
     /* Inline Tool Call Badges */
@@ -1261,7 +1446,7 @@
           <i data-lucide="globe"></i>
           <span id="headerFxLabel">¥ 人民币</span>
           <span style="opacity:0.35;">|</span>
-          <span id="headerTzLabel">北京时间</span>
+          <span id="headerTzLabel">到达时间：按当地时区</span>
           <i data-lucide="chevron-down" style="width:12px;height:12px;color:currentColor;opacity:0.6;"></i>
         </button>
 
@@ -1277,12 +1462,12 @@
       </div>
     </div>
 
-    <!-- Floating Popover: Currency Rate & Timezone Calculator -->
+    <!-- Floating Popover: Currency Rate & Arrival Time Calculator -->
     <div class="fx-tz-popover" id="fxTzPopover" onclick="event.stopPropagation()">
       <!-- 1. Currency Selector & Custom Rate -->
       <div>
         <div class="popover-sec-title">
-          <span>显示币种（点击切换全页价格）</span>
+          <span>显示币种（点击切换全页车票/酒店价格）</span>
           <button class="fx-mini-btn" onclick="refreshLiveFx()">刷新实时汇率</button>
         </div>
         <div class="currency-grid" id="currencyGrid"></div>
@@ -1303,48 +1488,45 @@
         </div>
         <!-- Quick Amount Converter -->
         <div class="fx-input-row" style="border-top:1px dashed var(--border-strong);padding-top:7px;">
-          <span>快算：¥</span>
-          <input type="number" id="quickCnyInput" value="100" class="fx-num-input" style="width:72px;" oninput="updateQuickCalc()" />
+          <span>票价快算：¥</span>
+          <input type="number" id="quickCnyInput" value="892" class="fx-num-input" style="width:72px;" oninput="updateQuickCalc()" />
           <span>≈</span>
-          <strong id="quickForeignOutput" style="font-family:var(--font-mono);color:var(--accent);">¥100</strong>
+          <strong id="quickForeignOutput" style="font-family:var(--font-mono);color:var(--accent);">¥892</strong>
         </div>
       </div>
 
-      <!-- 3. Timezone Calculator -->
+      <!-- 3. Flight / Train Arrival Time Calculator -->
       <div class="tz-converter-box">
         <div class="popover-sec-title" style="margin-bottom:2px;">
-          <span>目的地时区与时差计算</span>
+          <span>航班 / 交通到达时间跨时区换算</span>
           <select id="tzSelect" class="select-minimal" style="padding:3px 8px;font-size:11.5px;" onchange="onTimezoneChange()">
-            <option value="8|北京时间 (UTC+8)">北京时间 / 新加坡 / 香港 (UTC+8)</option>
-            <option value="7|河内 / 曼谷 (UTC+7)">越南河内 / 泰国曼谷 (UTC+7)</option>
-            <option value="9|东京 / 首尔 (UTC+9)">日本东京 / 韩国首尔 (UTC+9)</option>
-            <option value="4|迪拜 (UTC+4)">阿联酋迪拜 (UTC+4)</option>
-            <option value="3|开罗 / 伊斯坦布尔 (UTC+3)">开罗 / 伊斯坦布尔 (UTC+3)</option>
-            <option value="2|巴黎 / 苏黎世 / 罗马 (UTC+2)">欧洲中部 巴黎/苏黎世 (UTC+2)</option>
-            <option value="1|伦敦 (UTC+1)">英国伦敦 (UTC+1)</option>
-            <option value="-4|纽约 / 多伦多 (UTC-4)">美东 纽约/多伦多 (UTC-4)</option>
-            <option value="-7|洛杉矶 / 温哥华 (UTC-7)">美西 洛杉矶/温哥华 (UTC-7)</option>
-            <option value="11|悉尼 / 墨尔本 (UTC+11)">澳洲 悉尼/墨尔本 (UTC+11)</option>
-            <option value="13|奥克兰 (UTC+13)">新西兰奥克兰 (UTC+13)</option>
+            <option value="7|越南河内 / 曼谷 (UTC+7)">越南河内 / 泰国曼谷 (UTC+7 · 慢1h)</option>
+            <option value="9|日本东京 / 首尔 (UTC+9)">日本东京 / 韩国首尔 (UTC+9 · 快1h)</option>
+            <option value="8|国内 / 新加坡 / 香港 (UTC+8)">国内 / 新加坡 / 香港 (UTC+8 · 同区)</option>
+            <option value="4|阿联酋迪拜 (UTC+4)">阿联酋迪拜 (UTC+4 · 慢4h)</option>
+            <option value="2|巴黎 / 苏黎世 / 罗马 (UTC+2)">欧洲中部 巴黎/苏黎世 (UTC+2 · 慢6h)</option>
+            <option value="1|英国伦敦 (UTC+1)">英国伦敦 (UTC+1 · 慢7h)</option>
+            <option value="-4|纽约 / 多伦多 (UTC-4)">美东 纽约/多伦多 (UTC-4 · 慢12h)</option>
+            <option value="-7|洛杉矶 / 温哥华 (UTC-7)">美西 洛杉矶/温哥华 (UTC-7 · 慢15h)</option>
+            <option value="11|悉尼 / 墨尔本 (UTC+11)">澳洲 悉尼/墨尔本 (UTC+11 · 快3h)</option>
           </select>
+        </div>
+
+        <div class="fx-input-row" style="font-size:11.5px;color:var(--text-secondary);justify-content:space-between;flex-wrap:wrap;">
+          <span>起飞/出发 (北京)：<input type="time" id="tzSampleTime" value="09:25" class="fx-num-input" style="width:88px;" oninput="updateClocks()" /></span>
+          <span>航程：<input type="number" id="tzSampleDurH" value="3" min="0" max="36" class="fx-num-input" style="width:46px;" oninput="updateClocks()" />h <input type="number" id="tzSampleDurM" value="35" min="0" max="59" class="fx-num-input" style="width:48px;" oninput="updateClocks()" />m</span>
         </div>
 
         <div class="tz-clocks-row">
           <div class="tz-clock-card">
-            <div class="city-lbl">出发地 (北京时间)</div>
-            <div class="time-val" id="clockBeijing">--:--</div>
+            <div class="city-lbl" id="clockDestLabel">到达当地 (河内 UTC+7)</div>
+            <div class="time-val" id="clockDest" style="color:var(--accent);">12:00</div>
           </div>
-          <div class="tz-diff-badge" id="clockDiffBadge">无时差</div>
+          <div class="tz-diff-badge" id="clockDiffBadge">慢 1 小时</div>
           <div class="tz-clock-card">
-            <div class="city-lbl" id="clockDestLabel">目的地时间</div>
-            <div class="time-val" id="clockDest">--:--</div>
+            <div class="city-lbl">对应北京时间 (UTC+8)</div>
+            <div class="time-val" id="clockBeijing">13:00</div>
           </div>
-        </div>
-
-        <div class="fx-input-row" style="font-size:11.5px;color:var(--text-secondary);justify-content:space-between;">
-          <span>时刻换算：北京时间</span>
-          <input type="time" id="tzSampleTime" value="14:30" class="fx-num-input" style="width:94px;" oninput="updateClocks()" />
-          <span>→ 当地 <strong id="tzConvertedTime" style="font-family:var(--font-mono);color:var(--text-main);">14:30</strong></span>
         </div>
       </div>
     </div>
@@ -1442,8 +1624,9 @@
     };
     let customRates = {}; // user manual overrides: { VND: 3600 }
     let activeCurrency = 'CNY';
-    let activeTzOffset = 8;
-    let activeTzName = '北京时间';
+    let activeTzOffset = 7;
+    let activeTzName = '越南河内';
+    let arrivalTimeMode = 'local'; // 'local' | 'beijing'
 
     let sessionContext = { from_city: '', to_city: '', date: '', days: 2 };
     let chatHistory = [];
@@ -1483,22 +1666,25 @@
       return `${meta.symbol}${val.toFixed(1)}`;
     }
 
-    // Format price for cards: shows selected currency + secondary reference
-    function formatPriceHtml(cnyAmount, destCurrencyCode) {
+    // Format price for cards: interactive component that loads into turn converter on click
+    function formatPriceHtml(cnyAmount, destCurrencyCode, turnId, labelText) {
       const n = Number(cnyAmount);
       if (!n || isNaN(n)) return '--';
-      const targetCode = activeCurrency !== 'CNY' ? activeCurrency : (destCurrencyCode && destCurrencyCode !== 'CNY' ? destCurrencyCode : 'CNY');
+      const targetCurr = activeCurrency !== 'CNY'
+        ? activeCurrency
+        : (destCurrencyCode && destCurrencyCode !== 'CNY' ? destCurrencyCode : 'USD');
+      const clickAttr = turnId
+        ? `onclick="loadPriceIntoTurnCalc(${turnId}, ${Math.round(n)}, '${targetCurr}')" title="点击带入下方货币换算组件"`
+        : '';
       if (activeCurrency !== 'CNY') {
-        // User explicitly switched display currency
         const mainStr = formatConvertedValue(n, activeCurrency);
-        return `${mainStr}<span class="wt-price-sub">约 ¥${Math.round(n)}</span>`;
+        return `<span class="wt-price-btn" ${clickAttr}>${mainStr}<span class="wt-price-sub">⇄ 约 ¥${Math.round(n)}</span></span>`;
       }
       if (destCurrencyCode && destCurrencyCode !== 'CNY') {
-        // Auto dual-display for international destination
         const subStr = formatConvertedValue(n, destCurrencyCode);
-        return `¥${Math.round(n)}<span class="wt-price-sub">约 ${subStr}</span>`;
+        return `<span class="wt-price-btn" ${clickAttr}>¥${Math.round(n)}<span class="wt-price-sub">⇄ 约 ${subStr}</span></span>`;
       }
-      return `¥${Math.round(n)}`;
+      return `<span class="wt-price-btn" ${clickAttr}>¥${Math.round(n)}</span>`;
     }
 
     function formatPriceInline(cnyAmount) {
@@ -1508,6 +1694,54 @@
         return `${formatConvertedValue(n, activeCurrency)} (¥${Math.round(n)})`;
       }
       return `¥${Math.round(n)}`;
+    }
+
+    // Compute arrival time in local destination timezone & Beijing timezone from departure HH:MM + duration mins
+    function computeArrivalByTz(depHhmm, durationMins, arrTzOffset) {
+      const parts = String(depHhmm || '09:30').split(':').map(Number);
+      const dh = isNaN(parts[0]) ? 9 : parts[0];
+      const dm = isNaN(parts[1]) ? 30 : parts[1];
+      const dur = Number(durationMins) || 180;
+      const bjArrTotal = dh * 60 + dm + dur;
+      const bjDayDiff = Math.floor(bjArrTotal / 1440);
+      const bjRem = ((bjArrTotal % 1440) + 1440) % 1440;
+      const bjStr = `${String(Math.floor(bjRem / 60)).padStart(2, '0')}:${String(bjRem % 60).padStart(2, '0')}`;
+
+      const tzOff = typeof arrTzOffset === 'number' ? arrTzOffset : 8;
+      const tzShiftMins = Math.round((tzOff - 8) * 60);
+      const locArrTotal = bjArrTotal + tzShiftMins;
+      const locDayDiff = Math.floor(locArrTotal / 1440);
+      const locRem = ((locArrTotal % 1440) + 1440) % 1440;
+      const locStr = `${String(Math.floor(locRem / 60)).padStart(2, '0')}:${String(locRem % 60).padStart(2, '0')}`;
+
+      return {
+        bjStr,
+        bjDayDiff,
+        locStr,
+        locDayDiff,
+        tzDiffHours: tzOff - 8
+      };
+    }
+
+    // Render interactive arrival time badge for cross-timezone or domestic trips
+    function renderArrivalTimeComp(depTime, arrTimeLocal, arrTimeBj, durMins, arrTzOffset, cityLabel, turnId) {
+      const tzOff = typeof arrTzOffset === 'number' ? arrTzOffset : 8;
+      const calc = computeArrivalByTz(depTime, durMins, tzOff);
+      const locT = arrTimeLocal && /^\d{2}:\d{2}$/.test(arrTimeLocal) ? arrTimeLocal : calc.locStr;
+      const bjT = arrTimeBj && /^\d{2}:\d{2}$/.test(arrTimeBj) ? arrTimeBj : calc.bjStr;
+      const clickLoad = turnId
+        ? `onclick="onTimePillClick(event, ${turnId}, '${depTime}', ${durMins || 180}, ${tzOff}, '${(cityLabel || '').replace(/'/g, '')}')"`
+        : '';
+
+      if (tzOff !== 8) {
+        const sign = tzOff >= 0 ? `+${tzOff}` : `${tzOff}`;
+        if (arrivalTimeMode === 'local') {
+          return `${depTime} <i data-lucide="arrow-right" style="width:12px;height:12px;color:var(--text-muted);"></i> <strong>${locT}</strong> <span class="tz-inline-pill" ${clickLoad} title="点击切换时区或带入到达时间换算器">${cityLabel || '当地'} UTC${sign} · 北京${bjT} ⇄</span>`;
+        } else {
+          return `${depTime} <i data-lucide="arrow-right" style="width:12px;height:12px;color:var(--text-muted);"></i> <strong>${bjT}</strong> <span class="tz-inline-pill" ${clickLoad} title="点击切换时区或带入到达时间换算器">北京时间 · ${cityLabel || '当地'}${locT} ⇄</span>`;
+        }
+      }
+      return `${depTime} <i data-lucide="arrow-right" style="width:12px;height:12px;color:var(--text-muted);"></i> ${arrTimeLocal || locT} <span class="tz-inline-pill" ${clickLoad} title="点击带入到达时间换算器">换算 ⇄</span>`;
     }
 
     // Render currency buttons inside popover
@@ -1549,7 +1783,7 @@
       const cny = parseFloat(document.getElementById('quickCnyInput').value) || 0;
       const out = document.getElementById('quickForeignOutput');
       if (activeCurrency === 'CNY') {
-        out.textContent = `$${(cny * getEffectiveRate('USD')).toFixed(2)} USD / ${(cny * getEffectiveRate('VND') / 10000).toFixed(1)}万₫`;
+        out.textContent = `${(cny * getEffectiveRate('VND') / 10000).toFixed(1)}万₫ / $${(cny * getEffectiveRate('USD')).toFixed(1)}`;
       } else {
         out.textContent = `${formatConvertedValue(cny, activeCurrency)} (${activeCurrency})`;
       }
@@ -1598,43 +1832,27 @@
     }
 
     function updateClocks() {
-      const now = new Date();
-      const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-      const bjDate = new Date(utcMs + 8 * 3600000);
-      const destDate = new Date(utcMs + activeTzOffset * 3600000);
+      const depVal = (document.getElementById('tzSampleTime') && document.getElementById('tzSampleTime').value) || '09:25';
+      const durH = parseInt((document.getElementById('tzSampleDurH') && document.getElementById('tzSampleDurH').value) || '3', 10) || 0;
+      const durM = parseInt((document.getElementById('tzSampleDurM') && document.getElementById('tzSampleDurM').value) || '35', 10) || 0;
+      const totalDurMins = Math.max(10, durH * 60 + durM);
 
-      const fmt = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-      const bjStr = fmt(bjDate);
-      const destStr = fmt(destDate);
-
-      document.getElementById('clockBeijing').textContent = bjStr;
-      document.getElementById('clockDest').textContent = destStr;
-      document.getElementById('clockDestLabel').textContent = `${activeTzName} (UTC${activeTzOffset >= 0 ? '+' + activeTzOffset : activeTzOffset})`;
-
+      const res = computeArrivalByTz(depVal, totalDurMins, activeTzOffset);
       const diff = activeTzOffset - 8;
-      const diffText = diff === 0 ? '与北京同区' : (diff > 0 ? `快 ${diff} 小时` : `慢 ${Math.abs(diff)} 小时`);
-      document.getElementById('clockDiffBadge').textContent = diffText;
+      const diffText = diff === 0 ? '与北京同区' : (diff > 0 ? `比北京快 ${diff}h` : `比北京慢 ${Math.abs(diff)}h`);
 
-      // Header TZ label
-      document.getElementById('headerTzLabel').textContent =
-        diff === 0 ? `北京时间 ${bjStr}` : `${activeTzName} ${destStr} (${diff > 0 ? '+' + diff : diff}h)`;
+      const destEl = document.getElementById('clockDest');
+      const bjEl = document.getElementById('clockBeijing');
+      const lblEl = document.getElementById('clockDestLabel');
+      const diffEl = document.getElementById('clockDiffBadge');
+      if (destEl) destEl.textContent = `${res.locStr}${res.locDayDiff > 0 ? ' (+1天)' : ''}`;
+      if (bjEl) bjEl.textContent = `${res.bjStr}${res.bjDayDiff > 0 ? ' (+1天)' : ''}`;
+      if (lblEl) lblEl.textContent = `到达${activeTzName} (UTC${activeTzOffset >= 0 ? '+' + activeTzOffset : activeTzOffset})`;
+      if (diffEl) diffEl.textContent = diffText;
 
-      // Sample time converter
-      const sample = document.getElementById('tzSampleTime').value || '14:30';
-      const [sh, sm] = sample.split(':').map(Number);
-      if (!isNaN(sh) && !isNaN(sm)) {
-        let totalMins = sh * 60 + sm + diff * 60;
-        let dayNote = '';
-        if (totalMins < 0) {
-          totalMins += 1440;
-          dayNote = ' (前一天)';
-        } else if (totalMins >= 1440) {
-          totalMins -= 1440;
-          dayNote = ' (次日)';
-        }
-        const th = String(Math.floor(totalMins / 60)).padStart(2, '0');
-        const tm = String(totalMins % 60).padStart(2, '0');
-        document.getElementById('tzConvertedTime').textContent = `${th}:${tm}${dayNote}`;
+      const hdrTz = document.getElementById('headerTzLabel');
+      if (hdrTz) {
+        hdrTz.textContent = arrivalTimeMode === 'local' ? '到达时间：按当地时区' : '到达时间：按北京时间';
       }
     }
 
@@ -1712,14 +1930,42 @@
       handleSend();
     }
 
-    function formatSimpleMarkdown(text) {
+    function formatSimpleMarkdown(text, turnId) {
       if (!text) return '';
+      const st = turnId ? turnStore[turnId] : null;
+      const destCurr = (st && st.essentials && st.essentials.currency && st.essentials.currency !== 'CNY')
+        ? st.essentials.currency
+        : (activeCurrency !== 'CNY' ? activeCurrency : 'VND');
+      const tzOff = (st && st.essentials && typeof st.essentials.tz_offset === 'number')
+        ? st.essentials.tz_offset
+        : activeTzOffset;
+      const cityName = (st && ((st.essentials && st.essentials.city) || (st.intent && st.intent.to_city))) || '';
+
       let escaped = text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
       escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
       escaped = escaped.replace(/`([^`]+)`/g, '<code style="font-family:var(--font-mono);background:var(--bg-muted);padding:1px 6px;border-radius:5px;">$1</code>');
+
+      // Turn inline prices (e.g. ¥892, ¥1,280, 892元) into interactive currency components
+      escaped = escaped.replace(/(?:¥\s*(\d{2,6}(?:,\d{3})*)|(\d{2,6})\s*元)/g, (match, p1, p2) => {
+        const rawNum = parseInt(String(p1 || p2).replace(/,/g, ''), 10);
+        if (!rawNum || isNaN(rawNum) || rawNum < 15) return match;
+        const targetCode = activeCurrency !== 'CNY' ? activeCurrency : destCurr;
+        const convStr = targetCode && targetCode !== 'CNY' ? ` ⇄ ${formatConvertedValue(rawNum, targetCode)}` : '';
+        const clickFn = turnId ? `onclick="loadPriceIntoTurnCalc(${turnId}, ${rawNum}, '${targetCode}')"` : '';
+        return `<span class="chat-fx-chip" ${clickFn} title="点击带入下方汇率组件动态换算">¥${rawNum}${convStr}</span>`;
+      });
+
+      // Turn inline HH:MM schedules (e.g. 10:18, 07:25) into interactive time components
+      escaped = escaped.replace(/\b([01]\d|2[0-3]):([0-5]\d)\b/g, (match) => {
+        const clickFn = turnId
+          ? `onclick="onTimePillClick(event, ${turnId}, '${match}', 210, ${tzOff}, '${cityName.replace(/'/g, '')}')"`
+          : '';
+        return `<span class="chat-time-chip" ${clickFn} title="点击带入到达时间换算器"><i data-lucide="clock"></i>${match}</span>`;
+      });
+
       const lines = escaped.split('\n');
       let html = '';
       let inList = false;
@@ -1737,35 +1983,378 @@
       return html;
     }
 
-    // Destination Timezone & FX Banner inside Turn
-    function buildDestFxTzBarHtml(ess) {
-      if (!ess || !ess.city) return '';
-      const code = ess.currency || 'CNY';
-      const rate = getEffectiveRate(code);
-      const rateDisp = rate >= 100 ? Math.round(rate).toLocaleString() : rate.toFixed(2);
-      const isSwitched = activeCurrency === code;
+    const TZ_OPTIONS = [
+      { offset: 7, label: 'UTC+7 越南/泰国/印尼西 (慢1h)' },
+      { offset: 8, label: 'UTC+8 北京/新马/港澳台 (同区)' },
+      { offset: 9, label: 'UTC+9 日本/韩国 (快1h)' },
+      { offset: 4, label: 'UTC+4 迪拜/阿联酋 (慢4h)' },
+      { offset: 1, label: 'UTC+1 巴黎/法兰克福 (慢7h)' },
+      { offset: 0, label: 'UTC+0 伦敦/里斯本 (慢8h)' },
+      { offset: 10, label: 'UTC+10 悉尼/墨尔本 (快2h)' },
+      { offset: -5, label: 'UTC-5 纽约/美东 (慢13h)' },
+      { offset: -8, label: 'UTC-8 洛杉矶/美西 (慢16h)' }
+    ];
+
+    function ensureTurnCalcState(turnId) {
+      const st = turnStore[turnId];
+      if (!st) return null;
+      if (st.calcState) return st.calcState;
+
+      const ess = st.essentials || {};
+      const intent = st.intent || {};
+      const timePresets = [];
+      const pricePresets = [];
+
+      // Collect presets from smart transfers
+      (st.transfers || []).slice(0, 3).forEach((tr, idx) => {
+        const l1 = tr.leg1 || {};
+        const l2 = tr.leg2 || {};
+        const dep = (/^\d{2}:\d{2}$/.test(l1.dep_time) ? l1.dep_time : (/^\d{2}:\d{2}$/.test(l2.dep_time) ? l2.dep_time : '10:18'));
+        const dur = tr.total_duration_minutes || l2.duration_minutes || 310;
+        const tz = typeof l2.arr_tz_offset === 'number' ? l2.arr_tz_offset : (typeof ess.tz_offset === 'number' ? ess.tz_offset : 8);
+        timePresets.push({
+          id: `tr-${idx}`,
+          label: `经${tr.hub_city}中转 ${dep}发`,
+          depTime: dep,
+          durMins: dur,
+          tzOffset: tz,
+          city: intent.to_city || ess.city || '目的地'
+        });
+        if (tr.total_lowest_price) {
+          pricePresets.push({
+            id: `trp-${idx}`,
+            label: `经${tr.hub_city}中转 ¥${tr.total_lowest_price}`,
+            amount: tr.total_lowest_price
+          });
+        }
+      });
+
+      // Collect presets from flights
+      (st.flights || []).slice(0, 3).forEach((f, idx) => {
+        const dep = /^\d{2}:\d{2}$/.test(f.dep_time) ? f.dep_time : '09:25';
+        const dur = f.duration_minutes || 215;
+        const tz = typeof f.arr_tz_offset === 'number' ? f.arr_tz_offset : (typeof ess.tz_offset === 'number' ? ess.tz_offset : 8);
+        timePresets.push({
+          id: `fl-${idx}`,
+          label: `${f.flight_no} ${dep}发`,
+          depTime: dep,
+          durMins: dur,
+          tzOffset: tz,
+          city: intent.to_city || ess.city || '目的地'
+        });
+        if (f.lowest_price) {
+          pricePresets.push({
+            id: `flp-${idx}`,
+            label: `${f.flight_no} ¥${f.lowest_price}`,
+            amount: f.lowest_price
+          });
+        }
+      });
+
+      // Collect presets from trains
+      (st.trains || []).slice(0, 3).forEach((t, idx) => {
+        if (/^\d{2}:\d{2}$/.test(t.dep_time)) {
+          timePresets.push({
+            id: `tn-${idx}`,
+            label: `${t.train_code} ${t.dep_time}发`,
+            depTime: t.dep_time,
+            durMins: t.duration_minutes || 150,
+            tzOffset: 8,
+            city: intent.to_city || '目的地'
+          });
+        }
+        if (t.lowest_price) {
+          pricePresets.push({
+            id: `tnp-${idx}`,
+            label: `${t.train_code} ¥${Math.round(t.lowest_price)}`,
+            amount: Math.round(t.lowest_price)
+          });
+        }
+      });
+
+      // Collect presets from hotels
+      (st.hotels || []).slice(0, 2).forEach((h, idx) => {
+        if (h.price) {
+          pricePresets.push({
+            id: `htp-${idx}`,
+            label: `酒店 ¥${Math.round(h.price)}/晚`,
+            amount: Math.round(h.price)
+          });
+        }
+      });
+
+      const firstTime = timePresets[0] || {
+        depTime: '09:25',
+        durMins: 215,
+        tzOffset: typeof ess.tz_offset === 'number' ? ess.tz_offset : 8,
+        city: intent.to_city || ess.city || '目的地'
+      };
+      const firstPrice = pricePresets[0] || { amount: 892 };
+      const defaultCurr = activeCurrency !== 'CNY'
+        ? activeCurrency
+        : (ess.currency && ess.currency !== 'CNY' ? ess.currency : 'VND');
+
+      st.calcState = {
+        timePresets: timePresets.slice(0, 4),
+        pricePresets: pricePresets.slice(0, 4),
+        activeTimePreset: firstTime.id || '',
+        activePricePreset: firstPrice.id || '',
+        depTime: firstTime.depTime,
+        durHours: Math.floor(firstTime.durMins / 60),
+        durMins: firstTime.durMins % 60,
+        tzOffset: firstTime.tzOffset,
+        city: firstTime.city,
+        cnyAmount: firstPrice.amount,
+        targetCurr: defaultCurr
+      };
+      return st.calcState;
+    }
+
+    // In-Chat Interactive Arrival Time & Currency Dynamic Component
+    function buildTurnTimeFxWidgetHtml(turnId) {
+      const st = turnStore[turnId];
+      if (!st) return '';
+      const hasData = (st.trains && st.trains.length) || (st.flights && st.flights.length) || (st.transfers && st.transfers.length) || (st.hotels && st.hotels.length) || (st.essentials && st.essentials.city);
+      if (!hasData) return '';
+
+      const cs = ensureTurnCalcState(turnId);
+      if (!cs) return '';
+
+      const totalDurMins = Math.max(5, (parseInt(cs.durHours, 10) || 0) * 60 + (parseInt(cs.durMins, 10) || 0));
+      const arrRes = computeArrivalByTz(cs.depTime, totalDurMins, cs.tzOffset);
+      const tzSign = cs.tzOffset >= 0 ? `+${cs.tzOffset}` : `${cs.tzOffset}`;
+      const diffH = cs.tzOffset - 8;
+      const diffTag = diffH === 0 ? '与北京同区' : (diffH > 0 ? `比北京快 ${diffH} 小时` : `比北京慢 ${Math.abs(diffH)} 小时`);
+
+      const currCode = cs.targetCurr || 'VND';
+      const currMeta = getCurrencyMeta(currCode);
+      const effRate = getEffectiveRate(currCode);
+      const isCustomRate = Boolean(customRates[currCode]);
+      const convertedStr = formatConvertedValue(cs.cnyAmount, currCode);
+      const isAllCardForeign = activeCurrency === currCode && activeCurrency !== 'CNY';
+
+      const timePresetsHtml = cs.timePresets.map(p => `
+        <button class="calc-preset-chip ${cs.activeTimePreset === p.id ? 'active' : ''}"
+          onclick="selectTurnTimePreset(${turnId}, '${p.id}', '${p.depTime}', ${p.durMins}, ${p.tzOffset}, '${(p.city || '').replace(/'/g, '')}')">
+          ${p.label}
+        </button>
+      `).join('');
+
+      const pricePresetsHtml = cs.pricePresets.map(p => `
+        <button class="calc-preset-chip ${cs.activePricePreset === p.id ? 'active' : ''}"
+          onclick="selectTurnPricePreset(${turnId}, '${p.id}', ${p.amount})">
+          ${p.label}
+        </button>
+      `).join('');
+
+      const tzSelectOptions = TZ_OPTIONS.map(o =>
+        `<option value="${o.offset}" ${cs.tzOffset === o.offset ? 'selected' : ''}>${o.label}</option>`
+      ).join('');
+
+      const currSelectOptions = CURRENCY_LIST.filter(c => c.code !== 'CNY').map(c =>
+        `<option value="${c.code}" ${currCode === c.code ? 'selected' : ''}>${c.name} (${c.code})</option>`
+      ).join('');
+
       return `
-        <div class="dest-fx-tz-bar">
-          <div class="dest-fx-tz-items">
-            <span class="dest-fx-tz-item">
-              <i data-lucide="clock"></i>
-              <span><strong>${ess.city}当地时间 ${ess.local_time || ''}</strong> (${ess.timezone_desc || ''})</span>
-            </span>
-            <span class="dest-fx-tz-item">
-              <i data-lucide="coins"></i>
-              <span>实时汇率：<strong>1 ¥ ≈ ${rateDisp} ${ess.symbol || ''} (${ess.currency_name || code})</strong></span>
-            </span>
+        <div class="turn-calc-grid" id="turn-calc-${turnId}">
+          <!-- Left: Arrival Time & Timezone Calculator -->
+          <div class="calc-panel">
+            <div class="calc-panel-head">
+              <div class="calc-panel-title">
+                <i data-lucide="plane-landing"></i>
+                <span>班次起降与到达时间换算</span>
+              </div>
+              <button class="filter-pill ${arrivalTimeMode === 'beijing' ? 'active' : ''}" onclick="toggleGlobalArrivalTimeMode(${turnId})" title="一键切换上方卡片显示当地时间或北京时间">
+                <span>${arrivalTimeMode === 'local' ? '卡片显示：当地到达 ⇄' : '卡片显示：北京时间 ⇄'}</span>
+              </button>
+            </div>
+            ${timePresetsHtml ? `<div class="calc-presets">${timePresetsHtml}</div>` : ''}
+            <div class="calc-controls-row">
+              <span class="calc-field-label">出发(北京)</span>
+              <input type="time" class="calc-input" value="${cs.depTime}" onchange="onTurnTimeInputChange(${turnId}, 'dep', this.value)" />
+              <span class="calc-field-label">耗时</span>
+              <input type="number" class="calc-input num-xs" min="0" max="72" value="${cs.durHours}" oninput="onTurnTimeInputChange(${turnId}, 'durH', this.value)" />
+              <span class="calc-field-label">h</span>
+              <input type="number" class="calc-input num-xs" min="0" max="59" value="${cs.durMins}" oninput="onTurnTimeInputChange(${turnId}, 'durM', this.value)" />
+              <span class="calc-field-label">m</span>
+              <select class="calc-select" onchange="onTurnTimeInputChange(${turnId}, 'tz', this.value)">
+                ${tzSelectOptions}
+              </select>
+            </div>
+            <div class="calc-result-banner" id="turn-time-res-${turnId}">
+              <div>
+                <div class="calc-result-sub">目的地当地到达 (${cs.city || '当地'} UTC${tzSign})</div>
+                <div class="calc-result-main">${arrRes.locStr}${arrRes.locDayDiff > 0 ? ` <span style="font-size:11px;color:var(--accent);">+${arrRes.locDayDiff}天</span>` : ''}</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="calc-result-sub">对应北京时间 (UTC+8 · ${diffTag})</div>
+                <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text-primary);">${arrRes.bjStr}${arrRes.bjDayDiff > 0 ? ` (+${arrRes.bjDayDiff}天)` : ''}</div>
+              </div>
+            </div>
           </div>
-          <div class="dest-fx-tz-actions">
-            <button class="filter-pill ${isSwitched ? 'active' : ''}" onclick="selectCurrency('${isSwitched ? 'CNY' : code}')">
-              <span>${isSwitched ? '切换回 ¥ 人民币' : `按 ${ess.symbol || code} ${ess.currency_name} 计价`}</span>
-            </button>
-            <button class="filter-pill" onclick="selectCurrency('${code}');toggleFxTzPopover(event);">
-              <span>自定义汇率 / 时差</span>
-            </button>
+
+          <!-- Right: Ticket Price & Currency Dynamic Calculator -->
+          <div class="calc-panel">
+            <div class="calc-panel-head">
+              <div class="calc-panel-title">
+                <i data-lucide="coins"></i>
+                <span>票价与汇率动态换算</span>
+              </div>
+              <button class="filter-pill ${isAllCardForeign ? 'active' : ''}" onclick="selectCurrency('${isAllCardForeign ? 'CNY' : currCode}')">
+                <span>${isAllCardForeign ? '全卡切回 ¥ 人民币' : `全卡按 ${currMeta.name} 计价`}</span>
+              </button>
+            </div>
+            ${pricePresetsHtml ? `<div class="calc-presets">${pricePresetsHtml}</div>` : ''}
+            <div class="calc-controls-row">
+              <span class="calc-field-label">票价 ¥</span>
+              <input type="number" class="calc-input num-sm" min="1" step="10" value="${cs.cnyAmount}" oninput="onTurnFxInputChange(${turnId}, 'amount', this.value)" />
+              <select class="calc-select" onchange="onTurnFxInputChange(${turnId}, 'curr', this.value)">
+                ${currSelectOptions}
+              </select>
+              <span class="calc-field-label">汇率 1¥=</span>
+              <input type="number" class="calc-input num-sm" step="any" value="${effRate >= 100 ? Math.round(effRate) : Number(effRate.toFixed(4))}" onchange="onTurnFxInputChange(${turnId}, 'rate', this.value)" title="可直接输入自定义汇率" />
+              ${isCustomRate ? `<button class="filter-pill" style="padding:2px 7px;font-size:10.5px;" onclick="resetTurnAutoRate(${turnId}, '${currCode}')">恢复实时</button>` : ''}
+            </div>
+            <div class="calc-result-banner" id="turn-fx-res-${turnId}">
+              <div>
+                <div class="calc-result-sub">折合 ${currMeta.name} (${currCode})</div>
+                <div class="calc-result-main">${convertedStr}</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="calc-result-sub">${isCustomRate ? '当前使用：手动汇率' : '当前使用：实时汇率'}</div>
+                <div style="font-family:var(--font-mono);font-size:12.5px;font-weight:600;color:var(--text-primary);">1 ¥ = ${effRate >= 100 ? Math.round(effRate).toLocaleString() : effRate.toFixed(3)} ${currMeta.symbol}</div>
+              </div>
+            </div>
           </div>
         </div>
       `;
+    }
+
+    function selectTurnTimePreset(turnId, presetId, depTime, durMins, tzOffset, city) {
+      const cs = ensureTurnCalcState(turnId);
+      if (!cs) return;
+      cs.activeTimePreset = presetId;
+      cs.depTime = depTime;
+      cs.durHours = Math.floor(durMins / 60);
+      cs.durMins = durMins % 60;
+      cs.tzOffset = tzOffset;
+      if (city) cs.city = city;
+      rerenderTurnCalcOnly(turnId);
+    }
+
+    function onTimePillClick(e, turnId, depTime, durMins, tzOffset, city) {
+      if (e) e.stopPropagation();
+      const cs = ensureTurnCalcState(turnId);
+      if (!cs) return;
+      cs.activeTimePreset = '';
+      if (/^\d{2}:\d{2}$/.test(depTime)) cs.depTime = depTime;
+      if (durMins) {
+        cs.durHours = Math.floor(durMins / 60);
+        cs.durMins = durMins % 60;
+      }
+      if (typeof tzOffset === 'number') cs.tzOffset = tzOffset;
+      if (city) cs.city = city;
+      // Also toggle local vs Beijing mode if cross-timezone
+      if (tzOffset !== 8) {
+        arrivalTimeMode = arrivalTimeMode === 'local' ? 'beijing' : 'local';
+      }
+      rerenderAllTurns();
+    }
+
+    function toggleGlobalArrivalTimeMode(turnId) {
+      arrivalTimeMode = arrivalTimeMode === 'local' ? 'beijing' : 'local';
+      updateClocks();
+      rerenderAllTurns();
+    }
+
+    function onTurnTimeInputChange(turnId, field, val) {
+      const cs = ensureTurnCalcState(turnId);
+      if (!cs) return;
+      cs.activeTimePreset = '';
+      if (field === 'dep') cs.depTime = val || '09:25';
+      else if (field === 'durH') cs.durHours = Math.max(0, parseInt(val, 10) || 0);
+      else if (field === 'durM') cs.durMins = Math.max(0, parseInt(val, 10) || 0);
+      else if (field === 'tz') cs.tzOffset = parseInt(val, 10) || 8;
+      rerenderTurnCalcOnly(turnId);
+    }
+
+    function selectTurnPricePreset(turnId, presetId, amount) {
+      const cs = ensureTurnCalcState(turnId);
+      if (!cs) return;
+      cs.activePricePreset = presetId;
+      cs.cnyAmount = amount;
+      rerenderTurnCalcOnly(turnId);
+    }
+
+    function loadPriceIntoTurnCalc(turnId, amount, targetCurr) {
+      const cs = ensureTurnCalcState(turnId);
+      if (!cs) return;
+      cs.activePricePreset = '';
+      cs.cnyAmount = amount;
+      if (targetCurr && targetCurr !== 'CNY') cs.targetCurr = targetCurr;
+      rerenderTurnCalcOnly(turnId);
+      const el = document.getElementById(`turn-fx-res-${turnId}`);
+      if (el && window.gsap) {
+        gsap.fromTo(el, { scale: 0.97 }, { scale: 1, duration: 0.25, ease: 'back.out(2)' });
+      }
+    }
+
+    function onTurnFxInputChange(turnId, field, val) {
+      const cs = ensureTurnCalcState(turnId);
+      if (!cs) return;
+      if (field === 'amount') {
+        cs.activePricePreset = '';
+        cs.cnyAmount = Math.max(0, parseFloat(val) || 0);
+        // Update result banner without losing input focus
+        const resEl = document.getElementById(`turn-fx-res-${turnId}`);
+        if (resEl) {
+          const currMeta = getCurrencyMeta(cs.targetCurr);
+          const effRate = getEffectiveRate(cs.targetCurr);
+          const isCustomRate = Boolean(customRates[cs.targetCurr]);
+          resEl.innerHTML = `
+            <div>
+              <div class="calc-result-sub">折合 ${currMeta.name} (${cs.targetCurr})</div>
+              <div class="calc-result-main">${formatConvertedValue(cs.cnyAmount, cs.targetCurr)}</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="calc-result-sub">${isCustomRate ? '当前使用：手动汇率' : '当前使用：实时汇率'}</div>
+              <div style="font-family:var(--font-mono);font-size:12.5px;font-weight:600;color:var(--text-primary);">1 ¥ = ${effRate >= 100 ? Math.round(effRate).toLocaleString() : effRate.toFixed(3)} ${currMeta.symbol}</div>
+            </div>
+          `;
+        }
+        return;
+      }
+      if (field === 'curr') {
+        cs.targetCurr = val;
+        if (activeCurrency !== 'CNY') {
+          activeCurrency = val;
+        }
+        renderCurrencyGrid();
+        rerenderAllTurns();
+        return;
+      }
+      if (field === 'rate') {
+        const r = parseFloat(val);
+        if (r && r > 0) {
+          customRates[cs.targetCurr] = r;
+          renderCurrencyGrid();
+          rerenderAllTurns();
+        }
+      }
+    }
+
+    function resetTurnAutoRate(turnId, currCode) {
+      delete customRates[currCode];
+      renderCurrencyGrid();
+      rerenderAllTurns();
+    }
+
+    function rerenderTurnCalcOnly(turnId) {
+      const box = document.getElementById(`turn-calc-${turnId}`);
+      if (box) {
+        box.outerHTML = buildTurnTimeFxWidgetHtml(turnId);
+        refreshIcons();
+      }
     }
 
     // Widget 1: Train List
@@ -1797,10 +2386,10 @@
               <span class="wt-tag ${isHsr ? 'hsr' : 'norm'}">${t.train_type_badge}</span>
             </div>
             <div class="wt-time-route">
-              <div class="wt-times">${t.dep_time} <i data-lucide="arrow-right" style="width:12px;height:12px;color:var(--text-muted);"></i> ${t.arr_time}${t.day_diff > 0 ? `<sup style="color:var(--accent);">+${t.day_diff}</sup>` : ''}</div>
+              <div class="wt-times">${renderArrivalTimeComp(t.dep_time, t.arr_time, t.arr_time, t.duration_minutes || 150, 8, st.intent.to_city, turnId)}${t.day_diff > 0 ? `<sup style="color:var(--accent);">+${t.day_diff}</sup>` : ''}</div>
               <div class="wt-stations">${t.from_station} → ${t.to_station} · ${t.duration_text}</div>
             </div>
-            <div class="wt-price">${t.lowest_price ? formatPriceHtml(t.lowest_price, destCurr) : '--'}</div>
+            <div class="wt-price">${t.lowest_price ? formatPriceHtml(t.lowest_price, destCurr, turnId) : '--'}</div>
             <div class="wt-seats">${seatsHtml}</div>
             <div>
               <button class="wt-btn" onclick="toggleInlineStopover(${turnId}, ${idx}, '${t.train_no}', '${t.from_station_code}', '${t.to_station_code}', '${st.intent.date}')">
@@ -1900,24 +2489,37 @@
       const st = turnId ? turnStore[turnId] : null;
       const showTrBtn = st && (!st.transfers || !st.transfers.length);
       const maxRows = flights[0] && flights[0].is_international_calendar ? 3 : 5;
-      const rows = flights.slice(0, maxRows).map(f => `
-        <div class="w-train-row" style="grid-template-columns: 98px 190px 110px 1fr;">
-          <div>
-            <div class="wt-code">${f.flight_no}</div>
-            <span class="wt-tag flight">${f.airline_short}</span>
+      const essTz = st && st.essentials && typeof st.essentials.tz_offset === 'number' ? st.essentials.tz_offset : 8;
+      const rows = flights.slice(0, maxRows).map(f => {
+        const arrTz = typeof f.arr_tz_offset === 'number' ? f.arr_tz_offset : essTz;
+        const timeComp = renderArrivalTimeComp(
+          f.dep_time || '09:25',
+          f.arr_time_local || f.arr_time,
+          f.arr_time_beijing,
+          f.duration_minutes || 210,
+          arrTz,
+          intent.to_city,
+          turnId
+        );
+        return `
+          <div class="w-train-row" style="grid-template-columns: 98px 1.25fr 115px 1fr;">
+            <div>
+              <div class="wt-code">${f.flight_no}</div>
+              <span class="wt-tag flight">${f.airline_short}</span>
+            </div>
+            <div class="wt-time-route">
+              <div class="wt-times">${timeComp}</div>
+              <div class="wt-stations">${f.dep_airport_short}${f.dep_terminal} → ${f.arr_airport_short}${f.arr_terminal} (${f.duration_text})</div>
+            </div>
+            <div class="wt-price">${formatPriceHtml(f.lowest_price, destCurr, turnId)}</div>
+            <div class="wt-seats">
+              <span class="seat-chip avail">${f.economy_desc}</span>
+              <span class="seat-chip">${f.aircraft || '客机'}</span>
+              <span class="seat-chip">${f.meal}</span>
+            </div>
           </div>
-          <div class="wt-time-route">
-            <div class="wt-times">${f.dep_time} <i data-lucide="arrow-right" style="width:12px;height:12px;color:var(--text-muted);"></i> ${f.arr_time}</div>
-            <div class="wt-stations">${f.dep_airport_short}${f.dep_terminal} → ${f.arr_airport_short}${f.arr_terminal} (${f.duration_text})</div>
-          </div>
-          <div class="wt-price">${formatPriceHtml(f.lowest_price, destCurr)}</div>
-          <div class="wt-seats">
-            <span class="seat-chip avail">${f.economy_desc}</span>
-            <span class="seat-chip">${f.aircraft || '客机'}</span>
-            <span class="seat-chip">${f.meal}</span>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
 
       return `
         <div class="inline-widget">
@@ -1934,8 +2536,11 @@
     }
 
     // Widget 2.2: Smart Multi-Modal Transfer (空铁联运 / 同站换乘 / 联程转机)
-    function buildTransferWidgetHtml(transfers, intent, destCurr) {
+    function buildTransferWidgetHtml(transfers, intent, destCurr, turnId) {
       if (!transfers || !transfers.length) return '';
+      const st = turnId ? turnStore[turnId] : null;
+      const essTz = st && st.essentials && typeof st.essentials.tz_offset === 'number' ? st.essentials.tz_offset : 8;
+
       const rows = transfers.map(tr => {
         const l1 = tr.leg1 || {};
         const l2 = tr.leg2 || {};
@@ -1947,6 +2552,16 @@
         const isRailOnly = tr.transfer_type === 'rail_rail' || (l1IsTrain && l2IsTrain);
         const l1PriceStr = l1.lowest_price ? formatConvertedValue(l1.lowest_price, activeCurrency) : '';
         const l2PriceStr = l2.lowest_price ? formatConvertedValue(l2.lowest_price, activeCurrency) : '';
+        const l2Tz = typeof l2.arr_tz_offset === 'number' ? l2.arr_tz_offset : essTz;
+        const l2TimeHtml = renderArrivalTimeComp(
+          l2.dep_time || '14:15',
+          l2.arr_time_local || l2.arr_time,
+          l2.arr_time_beijing,
+          l2.duration_minutes || 210,
+          l2Tz,
+          intent.to_city,
+          turnId
+        );
 
         return `
           <div class="transfer-row">
@@ -1970,12 +2585,12 @@
               </div>
               <div class="tr-leg-item">
                 <span class="tr-leg-code"><i data-lucide="${l2IsTrain ? 'train-front' : 'plane'}" style="width:11px;height:11px;"></i> ${l2Code}</span>
-                <span><strong>${l2.from_station || ''}</strong> ${l2.dep_time || ''} → <strong>${l2.to_station || ''}</strong> ${l2.arr_time && l2.arr_time !== l2.to_station ? l2.arr_time : ''}</span>
+                <span><strong>${l2.from_station || ''}</strong> → <strong>${l2.to_station || ''}</strong> · ${l2TimeHtml}</span>
                 ${l2PriceStr ? `<span class="seat-chip">${l2PriceStr}</span>` : ''}
               </div>
             </div>
             <div style="text-align:right;">
-              <div class="wt-price">${formatPriceHtml(tr.total_lowest_price, destCurr)}</div>
+              <div class="wt-price">${formatPriceHtml(tr.total_lowest_price, destCurr, turnId)}</div>
               <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;">两程合计</div>
             </div>
           </div>
@@ -2005,13 +2620,14 @@
         const data = await res.json();
         if (data.ok && data.transfers && data.transfers.length) {
           st.transfers = data.transfers;
+          st.calcState = null;
           rerenderAllTurns();
         }
       } catch (e) {}
     }
 
     // Widget 2.5: Hotel List
-    function buildHotelWidgetHtml(hotels, hotelMeta, intent, destCurr) {
+    function buildHotelWidgetHtml(hotels, hotelMeta, intent, destCurr, turnId) {
       if (!hotels || !hotels.length) return '';
       const meta = hotelMeta || {};
       const city = meta.city || intent.hotel_city || intent.to_city || '';
@@ -2036,7 +2652,7 @@
               ${h.quote ? `<span class="seat-chip">"${h.quote}"</span>` : ''}
             </div>
             <div style="text-align:right;">
-              <div class="wt-price">${formatPriceHtml(h.price, destCurr)}</div>
+              <div class="wt-price">${formatPriceHtml(h.price, destCurr, turnId)}</div>
               ${h.tax_note ? `<div style="font-size:10.5px;color:var(--text-muted);">${h.tax_note}</div>` : ''}
             </div>
           </div>
@@ -2150,18 +2766,28 @@
       `;
     }
 
-    // Re-render all cards when user changes currency or custom exchange rate
+    // Re-render all cards & inline AI text chips when user changes currency, custom exchange rate, or arrival time mode
     function rerenderAllTurns() {
       Object.keys(turnStore).forEach(tid => {
+        const numId = Number(tid);
         const st = turnStore[tid];
         if (!st) return;
         const widgetsBox = document.getElementById(`widgets-${tid}`);
         if (widgetsBox) {
-          widgetsBox.innerHTML = renderTurnWidgetsHtml(Number(tid));
+          widgetsBox.innerHTML = renderTurnWidgetsHtml(numId);
         }
-        if (st.itinerary) {
+        if (st.rawReplyText) {
+          const replyBox = document.getElementById(`reply-${tid}`);
+          if (replyBox) {
+            let finalHtml = formatSimpleMarkdown(st.rawReplyText, numId);
+            if (st.itinerary) {
+              finalHtml += `<div id="itinerary-wrap-${tid}">${buildItineraryWidgetHtml(st.itinerary, numId)}</div>`;
+            }
+            replyBox.innerHTML = finalHtml;
+          }
+        } else if (st.itinerary) {
           const itBox = document.getElementById(`itinerary-wrap-${tid}`);
-          if (itBox) itBox.innerHTML = buildItineraryWidgetHtml(st.itinerary, Number(tid));
+          if (itBox) itBox.innerHTML = buildItineraryWidgetHtml(st.itinerary, numId);
         }
       });
       refreshIcons();
@@ -2172,10 +2798,6 @@
       if (!st) return '';
       const destCurr = (st.essentials && st.essentials.currency) || 'CNY';
       let widgetsHtml = '';
-
-      if (st.essentials && st.essentials.city) {
-        widgetsHtml += buildDestFxTzBarHtml(st.essentials);
-      }
 
       if (st.stopovers && st.stopovers.length) {
         widgetsHtml += buildStopoverWidgetHtml(st.stopovers, st.intent.train_code_query);
@@ -2190,12 +2812,15 @@
           widgetsHtml += buildFlightWidgetHtml(st.flights, st.intent, destCurr, turnId);
         }
         if (st.transfers && st.transfers.length) {
-          widgetsHtml += buildTransferWidgetHtml(st.transfers, st.intent, destCurr);
+          widgetsHtml += buildTransferWidgetHtml(st.transfers, st.intent, destCurr, turnId);
         }
         if (st.hotels && st.hotels.length) {
-          widgetsHtml += buildHotelWidgetHtml(st.hotels, st.hotel_meta, st.intent, destCurr);
+          widgetsHtml += buildHotelWidgetHtml(st.hotels, st.hotel_meta, st.intent, destCurr, turnId);
         }
       }
+
+      // Interactive In-Chat Time & Currency Converter Component
+      widgetsHtml += buildTurnTimeFxWidgetHtml(turnId);
       return widgetsHtml;
     }
 
@@ -2326,35 +2951,38 @@
 
         if (window.gsap) {
           const wTl = gsap.timeline();
-          wTl.fromTo(badgesBox.querySelectorAll('.tool-badge'), { scale: 0.9, y: 6, autoAlpha: 0 }, { scale: 1, y: 0, autoAlpha: 1, stagger: 0.05, duration: 0.28, ease: 'back.out(1.5)' })
-             .fromTo(widgetsBox.querySelectorAll('.dest-fx-tz-bar, .inline-widget'), { y: 18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, stagger: 0.07, duration: 0.4, ease: 'power3.out' }, '-=0.15')
-             .fromTo(widgetsBox.querySelectorAll('.w-train-row, .comp-box'), { y: 8, autoAlpha: 0 }, { y: 0, autoAlpha: 1, stagger: 0.025, duration: 0.28, ease: 'power2.out' }, '-=0.25');
-        }
+           wTl.fromTo(badgesBox.querySelectorAll('.tool-badge'), { scale: 0.9, y: 6, autoAlpha: 0 }, { scale: 1, y: 0, autoAlpha: 1, stagger: 0.05, duration: 0.28, ease: 'back.out(1.5)' })
+              .fromTo(widgetsBox.querySelectorAll('.inline-widget, .turn-calc-grid'), { y: 18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, stagger: 0.07, duration: 0.4, ease: 'power3.out' }, '-=0.15')
+              .fromTo(widgetsBox.querySelectorAll('.w-train-row, .transfer-row, .comp-box'), { y: 8, autoAlpha: 0 }, { y: 0, autoAlpha: 1, stagger: 0.025, duration: 0.28, ease: 'power2.out' }, '-=0.25');
+         }
 
-        const replyResp = await fetch('/api/chat/reply', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: text,
-            intent: toolData.intent,
-            trains: toolData.trains || [],
-            flights: toolData.flights || [],
-            hotels: toolData.hotels || [],
-            stopovers: toolData.stopovers || [],
-            transfers: toolData.transfers || [],
-            comparison: toolData.comparison,
-            history: chatHistory,
-            model: modelVal
-          })
-        });
-        const replyData = await replyResp.json();
+         const replyResp = await fetch('/api/chat/reply', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({
+             message: text,
+             intent: toolData.intent,
+             trains: toolData.trains || [],
+             flights: toolData.flights || [],
+             hotels: toolData.hotels || [],
+             stopovers: toolData.stopovers || [],
+             transfers: toolData.transfers || [],
+             comparison: toolData.comparison,
+             history: chatHistory,
+             model: modelVal
+           })
+         });
+         const replyData = await replyResp.json();
 
-        const replyBox = document.getElementById(`reply-${turnId}`);
-        let finalHtml = formatSimpleMarkdown(replyData.reply || '');
-        if (replyData.itinerary) {
-          finalHtml += `<div id="itinerary-wrap-${turnId}">${buildItineraryWidgetHtml(replyData.itinerary, turnId)}</div>`;
-        }
-        replyBox.innerHTML = finalHtml;
+         if (turnStore[turnId]) {
+           turnStore[turnId].rawReplyText = replyData.reply || '';
+         }
+         const replyBox = document.getElementById(`reply-${turnId}`);
+         let finalHtml = formatSimpleMarkdown(replyData.reply || '', turnId);
+         if (replyData.itinerary) {
+           finalHtml += `<div id="itinerary-wrap-${turnId}">${buildItineraryWidgetHtml(replyData.itinerary, turnId)}</div>`;
+         }
+         replyBox.innerHTML = finalHtml;
 
         if (toolData.follow_ups && toolData.follow_ups.length) {
           const fBox = document.getElementById(`followups-${turnId}`);
