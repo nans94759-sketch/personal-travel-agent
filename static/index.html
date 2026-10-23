@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>远行客 AI — 12306 & 机票实时对话助手</title>
+  <style>
+    :root {
+      --bg-page: #F7F7F5;
+      --bg-card: #FFFFFF;
+      --bg-muted: #F1F1EE;
+      --text-main: #18181B;
+      --text-secondary: #52525B;
+      --text-muted: #8E8E93;
+      --border: #E4E4E0;
+      --border-strong: #D1D1CB;
+      --primary: #18181B;
+      --blue: #0052CC;
+      --blue-bg: #EBF2FF;
+      --orange: #D94E1F;
+      --orange-bg: #FFF0EB;
+      --green: #0D7A52;
+      --green-bg: #E6F6EF;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-sm: 6px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-page);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Minimal Top Header */
+    .header {
+      height: 52px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(247, 247, 245, 0.88);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+    }
+
+    .header-inner {
+      width: 100%;
+      max-width: 820px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .app-title {
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      display: inline-block;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .select-minimal, .btn-minimal {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      color: var(--text-secondary);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 5px 10px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .btn-minimal:hover {
+      border-color: var(--text-main);
+      color: var(--text-main);
+    }
+
+    /* Center Chat Stream */
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 16px 32px;
+    }
+
+    .chat-stream {
+      max-width: 820px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Message Rows */
+    .msg-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .msg-row.user {
+      align-items: flex-end;
+    }
+
+    .msg-row.assistant {
+      align-items: flex-start;
+    }
+
+    .user-bubble {
+      background: var(--primary);
+      color: #FFFFFF;
+      padding: 10px 16px;
+      border-radius: 16px 16px 4px 16px;
+      font-size: 14.5px;
+      line-height: 1.55;
+      max-width: 78%;
+      word-break: break-word;
+    }
+
+    .assistant-card {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Inline Tool Call Badges */
+    .tool-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tool-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      font-family: var(--font-mono);
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--bg-muted);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .tool-badge strong {
+      color: var(--green);
+    }
+
+    /* Fixed Inline Widget Common Box */
+    .inline-widget {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: #FAFAFA;
+      overflow: hidden;
+    }
+
+    .widget-header {
+      padding: 10px 14px;
+      background: var(--bg-muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .widget-title {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .widget-filters {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .filter-pill {
+      font-size: 11.5px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .filter-pill.active {
+      background: var(--text-main);
+      color: #fff;
+      border-color: var(--text-main);
+    }
+
+    /* Widget 1: 12306 Train Rows */
+    .w-train-list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .w-train-row {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-card);
+      display: grid;
+      grid-template-columns: 88px 175px 78px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .w-train-row:last-child {
+      border-bottom: none;
+    }
+
+    .wt-code {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 14.5px;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .wt-tag {
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .wt-tag.hsr {
+      background: var(--blue-bg);
+      color: var(--blue);
+    }
+
+    .wt-tag.norm {
+      background: var(--bg-muted);
+      color: var(--text-secondary);
+    }
+
+    .wt-tag.flight {
+      background: var(--orange-bg);
+      color: var(--orange);
+    }
+
+    .wt-time-route {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .wt-times {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 13.5px;
+      color: var(--text-main);
+    }
+
+    .wt-stations {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+    }
+
+    .wt-price {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 14.5px;
+      color: var(--orange);
+    }
+
+    .wt-seats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .seat-chip {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--bg-muted);
+      color: var(--text-secondary);
+    }
+
+    .seat-chip.avail {
+      background: var(--green-bg);
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .seat-chip.none {
+      opacity: 0.45;
+      text-decoration: line-through;
+    }
+
+    .wt-btn {
+      font-size: 11.5px;
+      padding: 4px 8px;
+      border-radius: 5px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .wt-btn:hover {
+      border-color: var(--text-main);
+      color: var(--text-main);
+    }
+
+    .widget-More-btn {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      border-top: 1px solid var(--border);
+      background: #FAFAFA;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .widget-more-btn:hover {
+      background: var(--bg-muted);
+    }
+
+    /* Inline Stopover Strip */
+    .stopover-strip {
+      grid-column: 1 / -1;
+      margin-top: 6px;
+      padding: 8px 10px;
+      background: var(--bg-page);
+      border-radius: 6px;
+      border: 1px dashed var(--border-strong);
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+    }
+
+    .stop-pill {
+      min-width: 92px;
+      padding: 5px 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .stop-pill strong {
+      display: block;
+      color: var(--text-main);
+      margin-bottom: 2px;
+    }
+
+    .stop-pill span {
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+      font-size: 10.5px;
+      display: block;
+    }
+
+    /* Widget 2: Compact Comparison Bar */
+    .comp-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--bg-card);
+    }
+
+    .comp-box {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 12.5px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .comp-box.best {
+      border-color: var(--text-main);
+      background: #FCFCFA;
+    }
+
+    /* Widget 3: Inline Itinerary Card */
+    .itinerary-widget-body {
+      padding: 12px 14px;
+      background: var(--bg-card);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .it-day-block {
+      border-left: 2px solid var(--text-main);
+      padding-left: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .it-day-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .it-node {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .it-node code {
+      font-family: var(--font-mono);
+      color: var(--blue);
+      font-weight: 600;
+    }
+
+    /* AI Markdown Text Body */
+    .ai-reply-text {
+      font-size: 14.5px;
+      line-height: 1.65;
+      color: var(--text-main);
+    }
+
+    .ai-reply-text p {
+      margin-bottom: 8px;
+    }
+
+    .ai-reply-text p:last-child {
+      margin-bottom: 0;
+    }
+
+    .ai-reply-text ul, .ai-reply-text ol {
+      padding-left: 20px;
+      margin: 6px 0;
+    }
+
+    .ai-reply-text li {
+      margin-bottom: 4px;
+    }
+
+    .ai-thinking {
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Follow-up Action Chips inside Bubble */
+    .followup-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .followup-chip {
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--bg-page);
+      border: 1px solid var(--border-strong);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .followup-chip:hover {
+      background: var(--text-main);
+      color: #fff;
+      border-color: var(--text-main);
+    }
+
+    /* Bottom Input Dock */
+    .input-dock {
+      padding: 10px 16px 20px;
+      background: linear-gradient(180deg, rgba(247,247,245,0) 0%, var(--bg-page) 25%);
+      flex-shrink: 0;
+    }
+
+    .input-dock-inner {
+      max-width: 820px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .quick-prompts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .qp-btn {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .qp-btn:hover {
+      border-color: var(--text-main);
+      color: var(--text-main);
+    }
+
+    .input-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 10px 12px;
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    }
+
+    .input-box:focus-within {
+      border-color: var(--text-main);
+    }
+
+    .chat-textarea {
+      flex: 1;
+      border: none;
+      outline: none;
+      resize: none;
+      font-family: var(--font-sans);
+      font-size: 14.5px;
+      line-height: 1.5;
+      color: var(--text-main);
+      background: transparent;
+      max-height: 120px;
+      min-height: 24px;
+    }
+
+    .send-btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .send-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 680px) {
+      .w-train-row {
+        grid-template-columns: 75px 1fr auto;
+      }
+      .wt-seats {
+        grid-column: 1 / -1;
+      }
+      .comp-bar {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Minimal Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="app-title">
+        <span class="live-dot"></span>
+        <span>远行客 AI · 实时票务与行程对话助手</span>
+      </div>
+      <div class="header-controls">
+        <select id="modelSelect" class="select-minimal">
+          <option value="deepseek-v4.1-flash">模型: DeepSeek-V4.1 Flash (极速)</option>
+          <option value="deepseek-v4-pro-0813">模型: DeepSeek-V4 Pro (深度推理)</option>
+          <option value="deepseek-v4-flash-0731">模型: DeepSeek-V4 Flash</option>
+        </select>
+        <button class="btn-minimal" onclick="clearConversation()">清空对话</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Pure Chat Stream -->
+  <main class="chat-container" id="chatContainer">
+    <div class="chat-stream" id="chatStream">
+      <div class="msg-row assistant">
+        <div class="assistant-card">
+          <div class="ai-reply-text">
+            你好！我是你的个人出行对话助手，已直连 <b>12306 全国 3,300+ 车站实时余票/票价接口</b>、<b>国内民航 SSR 实时航班接口</b> 与 <b>携程/Trip.com 实时酒店房价接口</b>。<br/>
+            你可以直接用自然语言问我任何查火车票、查机票、查酒店房价、列车经停站或行程安排问题，我会在对话中直接调取实时数据组件回答你。
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Minimal Bottom Input Box -->
+  <footer class="input-dock">
+    <div class="input-dock-inner">
+      <div class="quick-prompts">
+        <button class="qp-btn" onclick="sendPrompt('本周日玉山到上海有哪些高铁？')">🚄 本周日玉山到上海高铁</button>
+        <button class="qp-btn" onclick="sendPrompt('明天北京到上海对比下高铁和机票哪个划算')">✈️ 明天北京到上海高铁+机票比价</button>
+        <button class="qp-btn" onclick="sendPrompt('本周日上海外滩附近有哪些高分酒店？')">🏨 本周日上海外滩实时酒店房价</button>
+        <button class="qp-btn" onclick="sendPrompt('明天上海去杭州玩2天，帮我查下早班高铁、西湖附近酒店并安排简单行程')">🗺️ 明天上海去杭州2天(车票+酒店+行程)</button>
+      </div>
+      <div class="input-box">
+        <textarea id="chatInput" class="chat-textarea" rows="1" placeholder="输入任何查票或行程问题，如：本周日玉山到上海... (Enter 发送)"></textarea>
+        <button id="btnSend" class="send-btn" onclick="handleSend()">发送</button>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Session memory across multi-turn conversation
+    let sessionContext = {
+      from_city: '',
+      to_city: '',
+      date: '',
+      days: 2
+    };
+    let chatHistory = [];
+    let turnCounter = 0;
+    // Store widget data per turnId so inline filters / expand buttons work independently
+    const turnStore = {};
+
+    function scrollToBottom() {
+      const c = document.getElementById('chatContainer');
+      c.scrollTop = c.scrollHeight;
+    }
+
+    function clearConversation() {
+      sessionContext = { from_city: '', to_city: '', date: '', days: 2 };
+      chatHistory = [];
+      document.getElementById('chatStream').innerHTML = `
+        <div class="msg-row assistant">
+          <div class="assistant-card">
+            <div class="ai-reply-text">对话已重置。请问你要查询哪条路线的火车票、机票或行程安排？</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function sendPrompt(text) {
+      document.getElementById('chatInput').value = text;
+      handleSend();
+    }
+
+    function formatSimpleMarkdown(text) {
+      if (!text) return '';
+      let escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      escaped = escaped.replace(/`([^`]+)`/g, '<code style="font-family:var(--font-mono);background:var(--bg-muted);padding:1px 5px;border-radius:4px;">$1</code>');
+      const lines = escaped.split('\n');
+      let html = '';
+      let inList = false;
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (/^[-•*]\s+/.test(trimmed)) {
+          if (!inList) { html += '<ul>'; inList = true; }
+          html += `<li>${trimmed.replace(/^[-•*]\s+/, '')}</li>`;
+        } else {
+          if (inList) { html += '</ul>'; inList = false; }
+          if (trimmed) html += `<p>${trimmed}</p>`;
+        }
+      }
+      if (inList) html += '</ul>';
+      return html;
+    }
+
+    // Inline Widget 1: 12306 Train List Widget
+    function buildTrainWidgetHtml(turnId) {
+      const st = turnStore[turnId];
+      if (!st || !st.trains || !st.trains.length) return '';
+
+      let list = st.trains.slice();
+      if (st.trainFilter === 'hsr') {
+        list = list.filter(t => /^[GDC]/.test(t.train_code));
+      } else if (st.trainFilter === 'avail') {
+        list = list.filter(t => t.can_buy);
+      }
+
+      const visibleList = st.expandTrains ? list : list.slice(0, 5);
+      const rowsHtml = visibleList.map((t, idx) => {
+        const isHsr = /^[GDC]/.test(t.train_code);
+        const seatsHtml = (t.seats || []).map(s => {
+          const cls = s.bookable ? 'avail' : 'none';
+          const p = s.price ? `¥${s.price}` : '';
+          return `<span class="seat-chip ${cls}">${s.name}${p}(${s.available})</span>`;
+        }).join('');
+
+        return `
+          <div class="w-train-row" id="turn-${turnId}-train-${idx}">
+            <div>
+              <div class="wt-code">${t.train_code}</div>
+              <span class="wt-tag ${isHsr ? 'hsr' : 'norm'}">${t.train_type_badge}</span>
+            </div>
+            <div class="wt-time-route">
+              <div class="wt-times">${t.dep_time} → ${t.arr_time}${t.day_diff > 0 ? `<sup style="color:var(--orange);">+${t.day_diff}</sup>` : ''}</div>
+              <div class="wt-stations">${t.from_station} → ${t.to_station} (${t.duration_text})</div>
+            </div>
+            <div class="wt-price">${t.lowest_price ? `¥${t.lowest_price}` : '--'}</div>
+            <div class="wt-seats">${seatsHtml}</div>
+            <div>
+              <button class="wt-btn" onclick="toggleInlineStopover(${turnId}, ${idx}, '${t.train_no}', '${t.from_station_code}', '${t.to_station_code}', '${st.intent.date}')">经停站 ▾</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const moreBtn = list.length > 5 ? `
+        <button class="widget-More-btn" onclick="toggleExpandTrains(${turnId})">
+          ${st.expandTrains ? '收起车次列表 ▴' : `展开全部 ${list.length} 趟实时车次 ▾`}
+        </button>
+      ` : '';
+
+      return `
+        <div class="inline-widget">
+          <div class="widget-header">
+            <div class="widget-title">🚄 12306 实时车次组件 · ${st.intent.from_city} → ${st.intent.to_city} (${st.intent.date})</div>
+            <div class="widget-filters">
+              <button class="filter-pill ${st.trainFilter === 'all' ? 'active' : ''}" onclick="setTrainFilter(${turnId}, 'all')">全部 (${st.trains.length})</button>
+              <button class="filter-pill ${st.trainFilter === 'hsr' ? 'active' : ''}" onclick="setTrainFilter(${turnId}, 'hsr')">仅高铁G/D</button>
+              <button class="filter-pill ${st.trainFilter === 'avail' ? 'active' : ''}" onclick="setTrainFilter(${turnId}, 'avail')">仅看有票</button>
+            </div>
+          </div>
+          <div class="w-train-list">${rowsHtml || '<div style="padding:12px;font-size:12.5px;color:var(--text-muted);">无符合筛选条件的车次</div>'}</div>
+          ${moreBtn}
+        </div>
+      `;
+    }
+
+    function setTrainFilter(turnId, filter) {
+      if (!turnStore[turnId]) return;
+      turnStore[turnId].trainFilter = filter;
+      const el = document.getElementById(`train-widget-${turnId}`);
+      if (el) el.innerHTML = buildTrainWidgetHtml(turnId);
+    }
+
+    function toggleExpandTrains(turnId) {
+      if (!turnStore[turnId]) return;
+      turnStore[turnId].expandTrains = !turnStore[turnId].expandTrains;
+      const el = document.getElementById(`train-widget-${turnId}`);
+      if (el) el.innerHTML = buildTrainWidgetHtml(turnId);
+    }
+
+    async function toggleInlineStopover(turnId, idx, trainNo, fromCode, toCode, dateStr) {
+      const row = document.getElementById(`turn-${turnId}-train-${idx}`);
+      if (!row) return;
+      const existing = row.querySelector('.stopover-strip');
+      if (existing) {
+        existing.remove();
+        return;
+      }
+      const strip = document.createElement('div');
+      strip.className = 'stopover-strip';
+      strip.innerHTML = `<span style="font-size:11.5px;color:var(--text-muted);">正在查询 12306 实时经停站...</span>`;
+      row.appendChild(strip);
+
+      try {
+        const res = await fetch(`/api/stopovers?train_no=${encodeURIComponent(trainNo)}&from_code=${fromCode}&to_code=${toCode}&date=${dateStr}`);
+        const data = await res.json();
+        if (data.ok && data.stops && data.stops.length) {
+          strip.innerHTML = data.stops.map(s => `
+            <div class="stop-pill">
+              <strong>${s.station_no}. ${s.station_name}</strong>
+              <span>到 ${s.arrive_time} / 发 ${s.start_time}</span>
+              <span>停 ${s.stopover_time}</span>
+            </div>
+          `).join('');
+        } else {
+          strip.innerHTML = `<span style="font-size:11.5px;color:var(--text-muted);">未获取到经停数据</span>`;
+        }
+      } catch (e) {
+        strip.innerHTML = `<span style="font-size:11.5px;color:var(--orange);">查询失败</span>`;
+      }
+    }
+
+    // Inline Widget 2: Flight List Widget
+    function buildFlightWidgetHtml(flights, intent) {
+      if (!flights || !flights.length) return '';
+      const rows = flights.slice(0, 6).map(f => `
+        <div class="w-train-row" style="grid-template-columns: 95px 185px 80px 1fr;">
+          <div>
+            <div class="wt-code">${f.flight_no}</div>
+            <span class="wt-tag flight">${f.airline_short}</span>
+          </div>
+          <div class="wt-time-route">
+            <div class="wt-times">${f.dep_time} → ${f.arr_time}</div>
+            <div class="wt-stations">${f.dep_airport_short}${f.dep_terminal} → ${f.arr_airport_short}${f.arr_terminal} (${f.duration_text})</div>
+          </div>
+          <div class="wt-price">¥${f.lowest_price}</div>
+          <div class="wt-seats">
+            <span class="seat-chip avail">${f.economy_desc}</span>
+            <span class="seat-chip">${f.aircraft || '客机'}</span>
+            <span class="seat-chip">🍱 ${f.meal}</span>
+          </div>
+        </div>
+      `).join('');
+
+      return `
+        <div class="inline-widget">
+          <div class="widget-header">
+            <div class="widget-title">✈️ 民航实时低价航班组件 · ${intent.from_city} → ${intent.to_city} (${intent.date})</div>
+          </div>
+          <div class="w-train-list">${rows}</div>
+        </div>
+      `;
+    }
+
+    // Inline Widget 2.5: Live Hotel Room Rate Widget
+    function buildHotelWidgetHtml(hotels, hotelMeta, intent) {
+      if (!hotels || !hotels.length) return '';
+      const meta = hotelMeta || {};
+      const city = meta.city || intent.hotel_city || intent.to_city || '';
+      const zone = meta.zone || '热门区域';
+      const cin = meta.checkin || intent.date || '';
+
+      const rows = hotels.slice(0, 6).map(h => {
+        const starText = h.star ? `${h.star}星/钻` : '精选';
+        const scoreBadge = h.score ? `${h.score}分 ${h.score_desc || ''}` : '高分';
+        const locText = [h.zone, h.position_desc].filter(Boolean).join(' · ') || h.address || '';
+        const origHtml = h.original_price ? `<span style="font-size:11px;color:var(--text-muted);text-decoration:line-through;margin-left:4px;">¥${h.original_price}</span>` : '';
+        return `
+          <div class="w-train-row" style="grid-template-columns: 1.5fr 95px 1.2fr 90px;">
+            <div class="wt-time-route">
+              <div class="wt-times" style="font-family:var(--font-sans);font-size:13.5px;">${h.name}</div>
+              <div class="wt-stations">📍 ${locText}</div>
+            </div>
+            <div>
+              <span class="seat-chip avail">${scoreBadge}</span>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${starText} ${h.review_count ? `· ${h.review_count}` : ''}</div>
+            </div>
+            <div class="wt-seats">
+              ${h.quote ? `<span class="seat-chip">💬 "${h.quote}"</span>` : ''}
+            </div>
+            <div style="text-align:right;">
+              <div class="wt-price">¥${h.price}<span style="font-size:11px;font-weight:400;color:var(--text-secondary);">起</span>${origHtml}</div>
+              ${h.tax_note ? `<div style="font-size:10.5px;color:var(--text-muted);">${h.tax_note}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="inline-widget">
+          <div class="widget-header">
+            <div class="widget-title">🏨 携程/Trip.com 实时酒店房价组件 · ${city} (${zone} · ${cin} 入住)</div>
+          </div>
+          <div class="w-train-list">${rows}</div>
+        </div>
+      `;
+    }
+
+    // Inline Widget 3: Door-to-Door Comparison Widget (when both trains and flights exist)
+    function buildComparisonWidgetHtml(comp) {
+      if (!comp || !comp.train_option || !comp.flight_option) return '';
+      if (!comp.train_option.available || !comp.flight_option.available) return '';
+      const t = comp.train_option;
+      const f = comp.flight_option;
+      return `
+        <div class="inline-widget">
+          <div class="widget-header">
+            <div class="widget-title">⚖️ 空铁联运门到门比价组件</div>
+          </div>
+          <div class="comp-bar">
+            <div class="comp-box ${comp.recommended_mode === 'train' ? 'best' : ''}">
+              <div><strong>🚄 高铁代表: ${t.best.train_code}</strong> (${t.best.from_station}→${t.best.to_station})</div>
+              <div>票价 <b>¥${t.best.lowest_price}</b> · 车程 ${t.best.duration_text} (${t.best.dep_time}→${t.best.arr_time})</div>
+              <div style="color:var(--text-muted);font-size:11.5px;">门到门总耗时约 <b>${t.door_to_door_text}</b> | 含市内交通约 <b>¥${t.estimated_total_cost}</b></div>
+            </div>
+            <div class="comp-box ${comp.recommended_mode === 'flight' ? 'best' : ''}">
+              <div><strong>✈️ 民航代表: ${f.best.flight_no}</strong> (${f.best.dep_airport_short}→${f.best.arr_airport_short})</div>
+              <div>裸票 <b>¥${f.best.lowest_price}</b> · 航程 ${f.best.duration_text} (${f.best.dep_time}→${f.best.arr_time})</div>
+              <div style="color:var(--text-muted);font-size:11.5px;">门到门总耗时约 <b>${f.door_to_door_text}</b> | 含机建燃油及机场交通约 <b>¥${f.estimated_total_cost}</b></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Inline Widget 4: Direct Stopover Card (when user asks "G1632经停哪些站")
+    function buildStopoverWidgetHtml(stopovers, trainCode) {
+      if (!stopovers || !stopovers.length) return '';
+      const pills = stopovers.map(s => `
+        <div class="stop-pill">
+          <strong>${s.station_no}. ${s.station_name}</strong>
+          <span>到 ${s.arrive_time} / 发 ${s.start_time}</span>
+          <span>停 ${s.stopover_time}</span>
+        </div>
+      `).join('');
+      return `
+        <div class="inline-widget">
+          <div class="widget-header">
+            <div class="widget-title">🕒 ${trainCode || ''} 列车 12306 实时经停时刻表组件</div>
+          </div>
+          <div style="padding:10px 14px;background:var(--bg-card);display:flex;gap:8px;overflow-x:auto;">${pills}</div>
+        </div>
+      `;
+    }
+
+    // Inline Widget 5: Structured Itinerary Timeline Card
+    function buildItineraryWidgetHtml(itinerary, turnId) {
+      if (!itinerary || !itinerary.days || !itinerary.days.length) return '';
+      turnStore[turnId].itinerary = itinerary;
+
+      const daysHtml = itinerary.days.map(d => `
+        <div class="it-day-block">
+          <div class="it-day-title">Day ${d.day} (${d.date || ''}) · ${d.theme || ''}</div>
+          ${(d.items || []).map(item => `
+            <div class="it-node">
+              <code>${item.time || ''}</code> <strong>${item.title || ''}</strong>
+              ${item.location ? `<span style="color:var(--text-muted);">(@${item.location})</span>` : ''}
+              ${item.cost ? `<span style="color:var(--orange);font-family:var(--font-mono);"> ¥${item.cost}</span>` : ''}
+              — ${item.detail || ''}
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+
+      return `
+        <div class="inline-widget" style="margin-top:8px;">
+          <div class="widget-header">
+            <div class="widget-title">🗺️ ${itinerary.title || '定制行程单组件'} ${itinerary.budget_total ? `(预计总预算 ¥${itinerary.budget_total})` : ''}</div>
+            <button class="filter-pill" onclick="exportTurnIcs(${turnId})">📅 导出 .ics 日历</button>
+          </div>
+          <div class="itinerary-widget-body">
+            ${itinerary.hotel_tip ? `<div style="font-size:12px;color:var(--green);background:var(--green-bg);padding:6px 10px;border-radius:6px;">🏨 <strong>住宿与换乘建议：</strong>${itinerary.hotel_tip}</div>` : ''}
+            ${daysHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    async function exportTurnIcs(turnId) {
+      const it = turnStore[turnId] && turnStore[turnId].itinerary;
+      if (!it) return;
+      const resp = await fetch('/api/export/ics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itinerary: it })
+      });
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${it.title || '智能行程单'}.ics`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function handleSend() {
+      const input = document.getElementById('chatInput');
+      const btn = document.getElementById('btnSend');
+      const text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+      const turnId = ++turnCounter;
+      const stream = document.getElementById('chatStream');
+
+      // 1. Append User Bubble
+      const userRow = document.createElement('div');
+      userRow.className = 'msg-row user';
+      userRow.innerHTML = `<div class="user-bubble">${text.replace(/</g, '&lt;')}</div>`;
+      stream.appendChild(userRow);
+
+      // 2. Append Assistant Card Skeleton
+      const aiRow = document.createElement('div');
+      aiRow.className = 'msg-row assistant';
+      aiRow.innerHTML = `
+        <div class="assistant-card" id="ai-card-${turnId}">
+          <div id="badges-${turnId}" class="tool-badges">
+            <span class="tool-badge">🤖 AI 正在根据工具规范自主规划并调用实时接口...</span>
+          </div>
+          <div id="widgets-${turnId}" style="display:flex;flex-direction:column;gap:10px;"></div>
+          <div id="reply-${turnId}" class="ai-reply-text">
+            <span class="ai-thinking">🧠 AI 正在根据实时票务数据生成回答...</span>
+          </div>
+          <div id="followups-${turnId}" class="followup-row" style="display:none;"></div>
+        </div>
+      `;
+      stream.appendChild(aiRow);
+      scrollToBottom();
+
+      try {
+        // Step 1: AI Tool Router + Live Tool Execution
+        const modelVal = document.getElementById('modelSelect').value;
+        const toolResp = await fetch('/api/chat/tools', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text,
+            context: sessionContext,
+            model: modelVal
+          })
+        });
+        const toolData = await toolResp.json();
+
+        if (toolData.needs_route_clarification) {
+          document.getElementById(`badges-${turnId}`).style.display = 'none';
+          document.getElementById(`reply-${turnId}`).innerHTML =
+            `请告诉我你的<b>出发城市/车站</b>和<b>到达城市/车站</b>（例如：“本周日玉山到上海” 或 “明天北京到杭州”），我立刻为你调取 12306 和民航实时数据。`;
+          return;
+        }
+
+        // Update session context for multi-turn memory
+        sessionContext = {
+          from_city: toolData.intent.from_city,
+          to_city: toolData.intent.to_city,
+          date: toolData.intent.date,
+          days: toolData.intent.days
+        };
+
+        turnStore[turnId] = {
+          intent: toolData.intent,
+          trains: toolData.trains || [],
+          flights: toolData.flights || [],
+          trainFilter: 'all',
+          expandTrains: false
+        };
+
+        // Render Tool Call Badges
+        const badgesBox = document.getElementById(`badges-${turnId}`);
+        if (toolData.tool_badges && toolData.tool_badges.length) {
+          badgesBox.innerHTML = toolData.tool_badges.map(b =>
+            `<span class="tool-badge">🔌 ${b.text} · <strong>${b.count}</strong></span>`
+          ).join('');
+        } else {
+          badgesBox.style.display = 'none';
+        }
+
+        // Render Fixed Inline Widgets immediately!
+        const widgetsBox = document.getElementById(`widgets-${turnId}`);
+        let widgetsHtml = '';
+        if (toolData.stopovers && toolData.stopovers.length) {
+          widgetsHtml += buildStopoverWidgetHtml(toolData.stopovers, toolData.intent.train_code_query);
+        } else {
+          if (toolData.comparison) {
+            widgetsHtml += buildComparisonWidgetHtml(toolData.comparison);
+          }
+          if (toolData.trains && toolData.trains.length) {
+            widgetsHtml += `<div id="train-widget-${turnId}">${buildTrainWidgetHtml(turnId)}</div>`;
+          }
+          if (toolData.flights && toolData.flights.length) {
+            widgetsHtml += buildFlightWidgetHtml(toolData.flights, toolData.intent);
+          }
+          if (toolData.hotels && toolData.hotels.length) {
+            widgetsHtml += buildHotelWidgetHtml(toolData.hotels, toolData.hotel_meta, toolData.intent);
+          }
+        }
+        widgetsBox.innerHTML = widgetsHtml;
+        scrollToBottom();
+
+        // Step 2: Call Live LLM for natural answer (+ optional Itinerary Widget)
+        const replyResp = await fetch('/api/chat/reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text,
+            intent: toolData.intent,
+            trains: toolData.trains || [],
+            flights: toolData.flights || [],
+            hotels: toolData.hotels || [],
+            stopovers: toolData.stopovers || [],
+            transfers: toolData.transfers || [],
+            comparison: toolData.comparison,
+            history: chatHistory,
+            model: modelVal
+          })
+        });
+        const replyData = await replyResp.json();
+
+        const replyBox = document.getElementById(`reply-${turnId}`);
+        let finalHtml = formatSimpleMarkdown(replyData.reply || '');
+        if (replyData.itinerary) {
+          finalHtml += buildItineraryWidgetHtml(replyData.itinerary, turnId);
+        }
+        replyBox.innerHTML = finalHtml;
+
+        // Render follow-up chips
+        if (toolData.follow_ups && toolData.follow_ups.length) {
+          const fBox = document.getElementById(`followups-${turnId}`);
+          fBox.style.display = 'flex';
+          fBox.innerHTML = toolData.follow_ups.map(q =>
+            `<button class="followup-chip" onclick="sendPrompt('${q.replace(/'/g, "\\'")}')">💬 ${q}</button>`
+          ).join('');
+        }
+
+        chatHistory.push({ role: 'user', content: text });
+        chatHistory.push({ role: 'assistant', content: replyData.reply || '' });
+        scrollToBottom();
+      } catch (err) {
+        document.getElementById(`reply-${turnId}`).innerHTML =
+          `<span style="color:var(--orange);">请求出错：${err.message}</span>`;
+      }
+    }
+
+    document.getElementById('chatInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    });
+  </script>
+</body>
+</html>

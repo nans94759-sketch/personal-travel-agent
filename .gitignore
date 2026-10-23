@@ -1,0 +1,16 @@
+# Environment & secrets
+.env
+.env.local
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Local runtime station cache (auto-generated on startup)
+.cache/
+
+# OS files
+.DS_Store
