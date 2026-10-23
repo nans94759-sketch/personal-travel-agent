@@ -112,6 +112,37 @@ CTRIP_CITY_ID_MAP: Dict[str, int] = {
     "清迈": 623,
     "新加坡": 73,
     "吉隆坡": 315,
+    "巴厘岛": 723,
+    "巴黎": 192,
+    "伦敦": 338,
+    "罗马": 343,
+    "米兰": 361,
+    "威尼斯": 688,
+    "佛罗伦萨": 684,
+    "苏黎世": 434,
+    "日内瓦": 666,
+    "因特拉肯": 1249,
+    "卢塞恩": 1246,
+    "琉森": 1246,
+    "法兰克福": 250,
+    "慕尼黑": 363,
+    "柏林": 193,
+    "阿姆斯特丹": 176,
+    "巴塞罗那": 40795,
+    "马德里": 357,
+    "维也纳": 291,
+    "布拉格": 1248,
+    "伊斯坦布尔": 532,
+    "迪拜": 220,
+    "开罗": 332,
+    "纽约": 633,
+    "洛杉矶": 347,
+    "旧金山": 313,
+    "温哥华": 476,
+    "多伦多": 469,
+    "悉尼": 501,
+    "墨尔本": 358,
+    "奥克兰": 674,
 }
 
 
@@ -129,7 +160,7 @@ class HotelScraperClient:
         try:
             url = (
                 "https://m.ctrip.com/restapi/h5api/globalsearch/search"
-                f"?action=online&source=globalonline&keyword={urllib.parse.quote(clean)}"
+                f"?action=online&source=globalonline&keyword={urllib.parse.quote(clean + '酒店')}"
             )
             raw = subprocess.check_output(
                 ["curl", "-sS", "--max-time", "6", url, "-H", "User-Agent: Mozilla/5.0"],
@@ -137,6 +168,17 @@ class HotelScraperClient:
             ).decode("utf-8", errors="ignore")
             data = json.loads(raw)
             items = data.get("data", [])
+            # Pass 0: Match official hotellist URL (e.g. http://hotels.ctrip.com/international/milan361#...)
+            for item in items:
+                if item.get("type") == "hotellist":
+                    m_u = re.search(
+                        r"/(?:international|hotel)/[a-zA-Z_-]*?(\d+)(?:#|$|\?|\.)",
+                        item.get("url") or "",
+                    )
+                    if m_u:
+                        cid = int(m_u.group(1))
+                        CTRIP_CITY_ID_MAP[clean] = cid
+                        return cid
             # Pass 1: Exact match on item['cityName'] or item['word']
             for item in items:
                 cname = to_simplified(item.get("cityName") or "")
@@ -246,23 +288,26 @@ class HotelScraperClient:
     @staticmethod
     def _fetch_ssr_full_str(url: str) -> str:
         import time
-        for attempt in range(3):
+        proxy_modes = [
+            ["-x", "http://127.0.0.1:7897", "--tlsv1.2", "--tls-max", "1.2", "--http1.1"],
+            ["--tlsv1.2", "--tls-max", "1.2", "--http1.1"],
+            ["-x", "http://127.0.0.1:7897", "--tlsv1.2", "--tls-max", "1.2", "--http1.1"],
+        ]
+        for attempt, extra_flags in enumerate(proxy_modes):
             try:
+                cmd = [
+                    "curl",
+                    "-sS",
+                    *extra_flags,
+                    "--max-time",
+                    "10",
+                    url,
+                    "-H",
+                    "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                ]
                 html = subprocess.check_output(
-                    [
-                        "curl",
-                        "-sS",
-                        "--tlsv1.2",
-                        "--tls-max",
-                        "1.2",
-                        "--http1.1",
-                        "--max-time",
-                        "12",
-                        url,
-                        "-H",
-                        "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-                    ],
-                    timeout=14,
+                    cmd,
+                    timeout=12,
                     stderr=subprocess.DEVNULL,
                 ).decode("utf-8", errors="ignore")
                 chunks = []
@@ -276,7 +321,7 @@ class HotelScraperClient:
                     return res
             except Exception:
                 pass
-            time.sleep(0.3 * (attempt + 1))
+            time.sleep(0.2 * (attempt + 1))
         return ""
 
     @staticmethod

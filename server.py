@@ -24,7 +24,13 @@ from planner_agent import (
     parse_user_intent,
 )
 from provider_12306 import Train12306Client
+from provider_attractions import GlobalAttractionClient
 from provider_flights import FlightScraperClient
+from provider_global_transit import (
+    CITY_COUNTRY_CURRENCY_MAP,
+    EURO_RAIL_STATION_MAP,
+    GlobalTransitClient,
+)
 from provider_hotels import HotelScraperClient
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -33,6 +39,8 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 train_client = Train12306Client()
 flight_client = FlightScraperClient()
 hotel_client = HotelScraperClient()
+attraction_client = GlobalAttractionClient()
+transit_client = GlobalTransitClient()
 
 
 async def handle_index(request: web.Request) -> web.FileResponse:
@@ -42,7 +50,8 @@ async def handle_index(request: web.Request) -> web.FileResponse:
 async def handle_chat_tools(request: web.Request) -> web.Response:
     """
     Step 1 of a chat turn:
-    Parse user message + session context, invoke live 12306 / Flight / Hotel / Stopover / Transfer tools,
+    Parse user message + session context, invoke live 12306 / Global Flight / Euro Rail /
+    Global Transit Passes / Global Hotel / Global Attraction Ticket / FX & Timezone tools,
     and return structured inline widgets immediately.
     """
     try:
@@ -61,29 +70,25 @@ async def handle_chat_tools(request: web.Request) -> web.Response:
     from_city = intent.get("from_city", "")
     to_city = intent.get("to_city", "")
     hotel_city = intent.get("hotel_city", "")
+    attraction_city = intent.get("attraction_city", "") or to_city or hotel_city
     date_str = intent.get("date", "")
     only_hotel = intent.get("only_hotel", False)
     asking_hotels = intent.get("asking_hotels", False)
+    asking_attractions = intent.get("asking_attractions", False)
+    only_attraction = intent.get("only_attraction", False)
+    asking_euro_trains = intent.get("asking_euro_trains", False)
+    asking_global_passes = intent.get("asking_global_passes", False)
+    only_global_pass = intent.get("only_global_pass", False)
 
-    if not only_hotel and (not from_city or not to_city):
-        if asking_hotels and hotel_city:
-            only_hotel = True
-        else:
-            return web.json_response(
-                {
-                    "ok": True,
-                    "needs_route_clarification": True,
-                    "intent": intent,
-                    "tool_badges": [],
-                    "trains": [],
-                    "flights": [],
-                    "hotels": [],
-                    "stopovers": [],
-                    "transfers": [],
-                    "comparison": None,
-                }
-            )
-    elif only_hotel and not hotel_city:
+    has_route = bool(from_city and to_city)
+    has_single_city_task = bool(
+        (asking_hotels and hotel_city)
+        or (asking_attractions and attraction_city)
+        or (asking_global_passes and (attraction_city or to_city or hotel_city or from_city))
+        or (intent.get("needs_itinerary") and (to_city or hotel_city or attraction_city))
+    )
+
+    if not has_route and not has_single_city_task:
         return web.json_response(
             {
                 "ok": True,
@@ -91,32 +96,77 @@ async def handle_chat_tools(request: web.Request) -> web.Response:
                 "intent": intent,
                 "tool_badges": [],
                 "trains": [],
+                "euro_trains": [],
                 "flights": [],
                 "hotels": [],
+                "attractions": [],
+                "global_passes": [],
+                "destination_essentials": None,
                 "stopovers": [],
                 "transfers": [],
                 "comparison": None,
             }
         )
 
-    loop = asyncio.get_running_loop()
     tool_badges: List[Dict[str, str]] = []
     trains: List[Dict[str, Any]] = []
+    euro_trains: List[Dict[str, Any]] = []
     flights: List[Dict[str, Any]] = []
     hotels: List[Dict[str, Any]] = []
     hotel_meta: Dict[str, Any] = {}
+    attractions: List[Dict[str, Any]] = []
+    attraction_meta: Dict[str, Any] = {}
+    global_passes: List[Dict[str, Any]] = []
+    destination_essentials: Dict[str, Any] = {}
     stopovers: List[Dict[str, Any]] = []
     transfers: List[Dict[str, Any]] = []
 
-    # Execute 12306, Flight, and/or Hotel queries in parallel
-    tasks = []
-    run_trains = (not only_hotel) and bool(from_city and to_city) and (not intent.get("only_flight", False))
-    run_flights = (not only_hotel) and bool(from_city and to_city) and (not intent.get("only_train", False))
-    run_hotels = bool(asking_hotels and hotel_city)
+    is_euro_route = bool(
+        from_city in EURO_RAIL_STATION_MAP or to_city in EURO_RAIL_STATION_MAP
+    )
+    skip_route_transport = bool(only_hotel or only_attraction or only_global_pass)
 
-    if run_trains:
+    tasks = []
+    run_12306 = (
+        has_route
+        and (not skip_route_transport)
+        and (not intent.get("only_flight", False))
+        and (not is_euro_route)
+    )
+    run_euro_rail = (
+        has_route
+        and (not skip_route_transport)
+        and (not intent.get("only_flight", False))
+        and (is_euro_route or asking_euro_trains)
+    )
+    run_flights = (
+        has_route
+        and (not skip_route_transport)
+        and (not intent.get("only_train", False))
+    )
+    run_hotels = bool(asking_hotels and hotel_city)
+    run_attractions = bool(asking_attractions and attraction_city)
+    pass_target_city = attraction_city or to_city or hotel_city or from_city
+    run_global_passes = bool(asking_global_passes and pass_target_city)
+
+    dest_city_for_fx = to_city or hotel_city or attraction_city
+    dest_city_info = (
+        flight_client.resolve_city_code(dest_city_for_fx)
+        if dest_city_for_fx
+        else None
+    ) or {}
+    is_intl_dest = bool(
+        (dest_city_for_fx and dest_city_for_fx in CITY_COUNTRY_CURRENCY_MAP)
+        or dest_city_info.get("is_inter")
+    )
+
+    if run_12306:
         tasks.append(
             ("trains", loop.run_in_executor(None, train_client.query_trains, from_city, to_city, date_str, False))
+        )
+    if run_euro_rail:
+        tasks.append(
+            ("euro_trains", loop.run_in_executor(None, transit_client.query_european_trains, from_city, to_city, date_str))
         )
     if run_flights:
         tasks.append(
@@ -136,43 +186,122 @@ async def handle_chat_tools(request: web.Request) -> web.Response:
                 ),
             )
         )
+    if run_attractions:
+        tasks.append(
+            (
+                "attractions",
+                loop.run_in_executor(
+                    None,
+                    attraction_client.query_attractions,
+                    attraction_city,
+                    intent.get("attraction_keyword"),
+                ),
+            )
+        )
+    if run_global_passes:
+        tasks.append(
+            (
+                "global_passes",
+                loop.run_in_executor(
+                    None,
+                    transit_client.query_global_transport_passes,
+                    intent.get("pass_keyword") or pass_target_city,
+                ),
+            )
+        )
+    if is_intl_dest:
+        tasks.append(
+            (
+                "essentials",
+                loop.run_in_executor(
+                    None,
+                    transit_client.query_destination_essentials,
+                    dest_city_for_fx,
+                ),
+            )
+        )
 
     results = await asyncio.gather(*(t[1] for t in tasks))
     for (name, _), res in zip(tasks, results):
         if name == "trains":
             trains = res.get("trains", [])
-            tool_badges.append(
-                {
-                    "tool": "12306",
-                    "text": f"12306 实时余票接口 ({from_city} → {to_city} · {date_str})",
-                    "count": f"{len(trains)} 趟列车",
-                }
-            )
+            if trains or not is_intl_dest:
+                tool_badges.append(
+                    {
+                        "tool": "12306",
+                        "text": f"{from_city} → {to_city} 火车票",
+                        "count": f"{len(trains)} 趟",
+                    }
+                )
+        elif name == "euro_trains":
+            euro_trains = res.get("trains", [])
+            if euro_trains:
+                tool_badges.append(
+                    {
+                        "tool": "euro_rail",
+                        "text": f"{from_city} → {to_city} 欧洲铁路",
+                        "count": f"{len(euro_trains)} 趟",
+                    }
+                )
         elif name == "flights":
             flights = res.get("flights", [])
             if flights or intent.get("only_flight"):
                 tool_badges.append(
                     {
                         "tool": "flight",
-                        "text": f"民航 SSR 实时航班接口 ({from_city} → {to_city} · {date_str})",
-                        "count": f"{len(flights)} 架次",
+                        "text": f"{from_city} → {to_city} 机票",
+                        "count": f"{len(flights)} 班",
                     }
                 )
         elif name == "hotels":
             hotels = res.get("hotels", [])
             hotel_meta = {
                 "city": res.get("city") or hotel_city,
-                "zone": res.get("zone") or "全城热门",
+                "zone": res.get("zone") or "热门区域",
                 "checkin": res.get("checkin") or date_str,
                 "checkout": res.get("checkout") or "",
             }
             tool_badges.append(
                 {
                     "tool": "hotel",
-                    "text": f"携程/Trip.com 实时酒店房价接口 ({hotel_meta['city']} · {hotel_meta['zone']} · {date_str}入住)",
-                    "count": f"{len(hotels)} 家实时房价",
+                    "text": f"{hotel_meta['city']} · {hotel_meta['zone']}酒店",
+                    "count": f"{len(hotels)} 家",
                 }
             )
+        elif name == "attractions":
+            attractions = res.get("attractions", [])
+            attraction_meta = {
+                "city": res.get("city") or attraction_city,
+                "district_id": res.get("district_id"),
+                "source": res.get("source", ""),
+            }
+            tool_badges.append(
+                {
+                    "tool": "attraction",
+                    "text": f"{attraction_meta['city']}景点门票",
+                    "count": f"{len(attractions)} 处",
+                }
+            )
+        elif name == "global_passes":
+            global_passes = res if isinstance(res, list) else res.get("passes", [])
+            if global_passes:
+                tool_badges.append(
+                    {
+                        "tool": "global_pass",
+                        "text": f"{pass_target_city}交通卡券",
+                        "count": f"{len(global_passes)} 项",
+                    }
+                )
+        elif name == "essentials":
+            destination_essentials = res or {}
+            if destination_essentials.get("fx_rate_text"):
+                tool_badges.append(
+                    {
+                        "tool": "fx",
+                        "text": f"{dest_city_for_fx}汇率与时差",
+                        "count": f"{destination_essentials.get('timezone_desc', '')}",
+                    }
+                )
 
     # If user asked for a specific train's stopovers (e.g. "G1632经停哪些站")
     train_code_q = intent.get("train_code_query")
@@ -193,22 +322,41 @@ async def handle_chat_tools(request: web.Request) -> web.Response:
             tool_badges.append(
                 {
                     "tool": "stopover",
-                    "text": f"12306 列车经停时刻表 ({matched_t['train_code']})",
+                    "text": f"{matched_t['train_code']} 经停时刻",
                     "count": f"{len(stopovers)} 站",
                 }
             )
 
-    # If user explicitly asked for transfers OR direct trains == 0
-    if intent.get("asking_transfer") or (run_trains and len(trains) == 0):
+    # Auto-trigger Smart Multi-Modal Transfers when:
+    # 1) User explicitly asks for transfers / 空铁联运 / 转机 / 换乘
+    # 2) Route is cross-border / international (e.g. 杭州 -> 河内, 苏州 -> 东京)
+    # 3) Direct domestic trains/flights are scarce or zero
+    need_auto_transfer = bool(
+        has_route
+        and not skip_route_transport
+        and not is_euro_route
+        and (
+            intent.get("asking_transfer")
+            or is_intl_dest
+            or (run_12306 and len(trains) <= 2)
+            or (run_flights and len(flights) == 0)
+        )
+    )
+    if need_auto_transfer:
         transfers = await loop.run_in_executor(
-            None, train_client.query_smart_transfers, from_city, to_city, date_str, 2
+            None,
+            flight_client.query_smart_multi_transfers,
+            from_city,
+            to_city,
+            date_str,
+            train_client,
         )
         if transfers:
             tool_badges.append(
                 {
                     "tool": "transfer",
-                    "text": f"12306 全国枢纽联程中转计算 ({from_city} → {to_city})",
-                    "count": f"{len(transfers)} 套方案",
+                    "text": f"{from_city} → {to_city} 智能中转",
+                    "count": f"{len(transfers)} 套",
                 }
             )
 
@@ -216,20 +364,20 @@ async def handle_chat_tools(request: web.Request) -> web.Response:
 
     # Generate smart contextual follow-up chips
     follow_ups = []
+    target_c = to_city or hotel_city or attraction_city
     if trains:
         best_t = (comparison.get("train_option") or {}).get("best") or trains[0]
-        follow_ups.append(f"查看 {best_t['train_code']} 途经哪些经停站")
-        if not hotels:
-            follow_ups.append(f"查一下{date_str}{to_city}有哪些高分酒店")
-        if not intent.get("needs_itinerary"):
-            follow_ups.append(f"基于 {best_t['train_code']} 帮我规划{to_city}2天行程")
-    elif hotels and hotel_city:
-        follow_ups.append(f"明天去{hotel_city}有哪些高铁和机票？")
-        follow_ups.append(f"帮我规划{hotel_city}2天游行程")
-    if flights and not intent.get("only_flight"):
-        follow_ups.append(f"只看{from_city}到{to_city}的便宜机票")
+        follow_ups.append(f"{best_t['train_code']} 沿途停靠哪些站")
+    if target_c and not hotels:
+        follow_ups.append(f"{target_c}有哪些高分酒店")
+    if target_c and not attractions:
+        follow_ups.append(f"{target_c}热门景点门票")
+    if target_c and not global_passes and is_intl_dest:
+        follow_ups.append(f"{target_c}交通卡与机场快线")
+    if target_c and not intent.get("needs_itinerary"):
+        follow_ups.append(f"规划{target_c} 3 天游玩行程")
     if from_city and to_city:
-        follow_ups.append(f"那后天从{from_city}到{to_city}呢？")
+        follow_ups.append(f"后天{from_city}去{to_city}呢")
 
     return web.json_response(
         {
@@ -238,13 +386,18 @@ async def handle_chat_tools(request: web.Request) -> web.Response:
             "intent": intent,
             "tool_badges": tool_badges,
             "trains": trains,
+            "euro_trains": euro_trains,
             "flights": flights,
             "hotels": hotels,
             "hotel_meta": hotel_meta,
+            "attractions": attractions,
+            "attraction_meta": attraction_meta,
+            "global_passes": global_passes,
+            "destination_essentials": destination_essentials,
             "stopovers": stopovers,
             "transfers": transfers,
             "comparison": comparison,
-            "follow_ups": follow_ups[:3],
+            "follow_ups": follow_ups[:4],
         }
     )
 
@@ -263,8 +416,12 @@ async def handle_chat_reply(request: web.Request) -> web.Response:
     message = (body.get("message") or "").strip()
     intent = body.get("intent") or {}
     trains = body.get("trains") or []
+    euro_trains = body.get("euro_trains") or []
     flights = body.get("flights") or []
     hotels = body.get("hotels") or []
+    attractions = body.get("attractions") or []
+    global_passes = body.get("global_passes") or []
+    destination_essentials = body.get("destination_essentials") or {}
     stopovers = body.get("stopovers") or []
     transfers = body.get("transfers") or []
     comparison = body.get("comparison") or {}
@@ -284,6 +441,10 @@ async def handle_chat_reply(request: web.Request) -> web.Response:
         transfers,
         comparison,
         history,
+        attractions,
+        euro_trains,
+        global_passes,
+        destination_essentials,
         preferred_model,
     )
     return web.json_response(res)
@@ -310,7 +471,12 @@ async def handle_transfers(request: web.Request) -> web.Response:
     date_str = request.query.get("date", "").strip()
     loop = asyncio.get_running_loop()
     transfers = await loop.run_in_executor(
-        None, train_client.query_smart_transfers, from_city, to_city, date_str, 3
+        None,
+        flight_client.query_smart_multi_transfers,
+        from_city,
+        to_city,
+        date_str,
+        train_client,
     )
     return web.json_response({"ok": True, "transfers": transfers})
 
@@ -332,9 +498,22 @@ async def handle_export_ics(request: web.Request) -> web.Response:
     )
 
 
+async def handle_fx(request: web.Request) -> web.Response:
+    force = request.query.get("refresh") == "1"
+    loop = asyncio.get_running_loop()
+    fx_data = await loop.run_in_executor(None, transit_client.get_all_fx_rates, force)
+    return web.json_response(
+        {
+            **fx_data,
+            "cities": CITY_COUNTRY_CURRENCY_MAP,
+        }
+    )
+
+
 def create_app() -> web.Application:
     app = web.Application()
     app.router.add_get("/", handle_index)
+    app.router.add_get("/api/fx", handle_fx)
     app.router.add_post("/api/chat/tools", handle_chat_tools)
     app.router.add_post("/api/chat/reply", handle_chat_reply)
     app.router.add_get("/api/stopovers", handle_stopovers)

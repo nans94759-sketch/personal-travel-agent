@@ -10,6 +10,7 @@ Zero-key open-source reverse-engineered 12306 client:
 - Smart multi-hub transfer (中转联程) computation across major national rail hubs
 """
 
+import concurrent.futures
 import datetime
 import email.utils
 import http.cookiejar
@@ -50,16 +51,17 @@ SEAT_CODE_MAP: Dict[str, Tuple[str, int]] = {
 
 # Major national high-speed rail transfer hubs for smart 1-stop transfer calculation
 NATIONAL_HUBS = [
-    ("武汉", "WHN"),
-    ("郑州", "ZZF"),
-    ("徐州", "XCH"),
-    ("长沙", "CSQ"),
-    ("南京", "NJH"),
-    ("西安", "XAY"),
-    ("南昌", "NCG"),
-    ("石家庄", "SJP"),
+    ("上海", "SHH"),
     ("杭州", "HZH"),
+    ("南京", "NJH"),
+    ("武汉", "WHN"),
+    ("南昌", "NCG"),
+    ("长沙", "CSQ"),
+    ("郑州", "ZZF"),
     ("广州", "GZQ"),
+    ("徐州", "XCH"),
+    ("北京", "BJP"),
+    ("西安", "XAY"),
     ("成都", "CDW"),
     ("沈阳", "SYT"),
 ]
@@ -469,7 +471,7 @@ class Train12306Client:
     ) -> List[Dict[str, Any]]:
         """
         Compute smart 1-stop high-speed rail transfers across national hubs
-        when direct trains are scarce or sold out.
+        in parallel when direct trains are scarce or sold out.
         """
         from_st = self.resolve_station(from_city)
         to_st = self.resolve_station(to_city)
@@ -483,22 +485,33 @@ class Train12306Client:
             and h_name not in (from_st["city"], to_st["city"])
         ][:max_hubs]
 
-        transfer_plans = []
-        for hub_name, _ in candidate_hubs:
-            leg1_res = self.query_trains(from_city, hub_name, train_date, only_high_speed=True)
-            leg2_res = self.query_trains(hub_name, to_city, train_date, only_high_speed=True)
-            leg1_trains = [t for t in leg1_res.get("trains", []) if t["can_buy"]]
-            leg2_trains = [t for t in leg2_res.get("trains", []) if t["can_buy"]]
+        def _fetch_hub_legs(hub_name: str) -> Tuple[str, List[Dict[str, Any]], List[Dict[str, Any]]]:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as sub_pool:
+                f1 = sub_pool.submit(self.query_trains, from_city, hub_name, train_date, True)
+                f2 = sub_pool.submit(self.query_trains, hub_name, to_city, train_date, True)
+                r1 = f1.result()
+                r2 = f2.result()
+            l1 = [t for t in r1.get("trains", []) if t.get("can_buy")]
+            l2 = [t for t in r2.get("trains", []) if t.get("can_buy")]
+            return hub_name, l1, l2
+
+        transfer_plans: List[Dict[str, Any]] = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(candidate_hubs))) as pool:
+            hub_results = list(pool.map(lambda item: _fetch_hub_legs(item[0]), candidate_hubs))
+
+        for hub_name, leg1_trains, leg2_trains in hub_results:
             if not leg1_trains or not leg2_trains:
                 continue
 
-            for t1 in leg1_trains[:6]:
+            for t1 in leg1_trains[:8]:
                 if t1["day_diff"] > 0:
                     continue
                 arr1_h, arr1_m = map(int, t1["arr_time"].split(":"))
                 arr1_mins = arr1_h * 60 + arr1_m
 
                 for t2 in leg2_trains:
+                    if t1["train_code"] == t2["train_code"]:
+                        continue
                     dep2_h, dep2_m = map(int, t2["dep_time"].split(":"))
                     dep2_mins = dep2_h * 60 + dep2_m
                     wait_mins = dep2_mins - arr1_mins
@@ -507,24 +520,44 @@ class Train12306Client:
                     if min_wait <= wait_mins <= 180:
                         total_mins = t1["duration_minutes"] + wait_mins + t2["duration_minutes"]
                         total_price = (t1["lowest_price"] or 0) + (t2["lowest_price"] or 0)
+                        wait_str = (
+                            f"{wait_mins // 60}小时{wait_mins % 60}分"
+                            if wait_mins >= 60
+                            else f"{wait_mins}分钟"
+                        )
                         transfer_plans.append(
                             {
+                                "transfer_type": "rail_rail",
+                                "badge_text": "同站换乘 · 高铁中转" if same_station else "同城换乘 · 高铁中转",
                                 "hub_city": hub_name,
+                                "transfer_station": t1["to_station"]
+                                if same_station
+                                else f"{t1['to_station']} ➔ {t2['from_station']}",
                                 "same_station": same_station,
                                 "wait_minutes": wait_mins,
-                                "wait_text": f"{wait_mins // 60}小时{wait_mins % 60}分"
-                                if wait_mins >= 60
-                                else f"{wait_mins}分钟",
+                                "wait_text": f"{'同站换乘' if same_station else '异站换乘'} · 停留 {wait_str}",
                                 "total_minutes": total_mins,
                                 "total_duration_text": f"{total_mins // 60}小时{total_mins % 60}分",
                                 "total_lowest_price": round(total_price, 1),
-                                "leg1": t1,
-                                "leg2": t2,
+                                "leg1": {
+                                    **t1,
+                                    "mode": "train",
+                                    "code": t1["train_code"],
+                                    "type_badge": t1.get("train_type_badge", "高铁"),
+                                    "seat_desc": f"¥{t1['lowest_price']} 起" if t1.get("lowest_price") else "有票",
+                                },
+                                "leg2": {
+                                    **t2,
+                                    "mode": "train",
+                                    "code": t2["train_code"],
+                                    "type_badge": t2.get("train_type_badge", "高铁"),
+                                    "seat_desc": f"¥{t2['lowest_price']} 起" if t2.get("lowest_price") else "有票",
+                                },
                             }
                         )
                         break
                 if len(transfer_plans) >= 4:
                     break
 
-        transfer_plans.sort(key=lambda x: x["total_minutes"])
+        transfer_plans.sort(key=lambda x: (x["total_lowest_price"] or 9999, x["total_minutes"]))
         return transfer_plans[:4]

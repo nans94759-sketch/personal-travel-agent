@@ -17,6 +17,8 @@ import subprocess
 from typing import Any, Dict, List, Optional, Tuple
 
 from provider_12306 import Train12306Client
+from provider_attractions import GLOBAL_DISTRICT_ID_MAP
+from provider_global_transit import CITY_COUNTRY_CURRENCY_MAP, EURO_RAIL_STATION_MAP
 from provider_hotels import CTRIP_CITY_ID_MAP
 
 def _load_dotenv() -> None:
@@ -70,6 +72,9 @@ ALL_PLACES_SORTED: List[str] = sorted(
         list(_station_helper.stations_by_name.keys())
         + list(_station_helper.city_to_main_station.keys())
         + list(CTRIP_CITY_ID_MAP.keys())
+        + list(GLOBAL_DISTRICT_ID_MAP.keys())
+        + list(CITY_COUNTRY_CURRENCY_MAP.keys())
+        + [k for k in EURO_RAIL_STATION_MAP.keys() if not k.isascii()]
     ),
     key=len,
     reverse=True,
@@ -216,7 +221,7 @@ def parse_user_intent(
             from_city = from_city or hits[0][1]
             to_city = to_city or hits[1][1]
         elif len(hits) == 1:
-            if any(k in msg_for_cities for k in ["去", "到", "飞", "前往", "至", "酒店", "宾馆", "住宿", "住哪", "民宿", "房价", "玩", "旅游", "攻略"]):
+            if any(k in msg_for_cities for k in ["去", "到", "飞", "前往", "至", "酒店", "宾馆", "住宿", "住哪", "民宿", "房价", "玩", "旅游", "攻略", "门票", "景点", "好玩", "必去", "迪士尼", "环球影城", "博物馆", "交通", "乘车券", "通票"]):
                 to_city = to_city or hits[0][1]
             else:
                 from_city = from_city or hits[0][1]
@@ -230,20 +235,108 @@ def parse_user_intent(
     asking_hotels = any(
         k in message for k in ["酒店", "宾馆", "住宿", "住哪", "民宿", "房价", "订房", "旅馆"]
     )
-    only_hotel = asking_hotels and not any(
+
+    # Check if user is asking for attractions / tickets / sightseeing
+    asking_attractions = any(
         k in message
-        for k in ["高铁", "动车", "火车", "12306", "机票", "飞机", "航班", "怎么去", "坐车"]
+        for k in [
+            "门票",
+            "景点",
+            "好玩",
+            "必去",
+            "打卡",
+            "博物馆",
+            "乐园",
+            "迪士尼",
+            "环球影城",
+            "游船",
+            "卢浮宫",
+            "铁塔",
+            "凡尔赛",
+            "涩谷",
+            "滨海湾",
+            "玩乐",
+            "景区",
+            "票价",
+        ]
+    )
+    attraction_city = to_city or single_detected_city or default_to or default_from
+    attraction_keyword = None
+    m_attr_kw = re.search(
+        r"(迪士尼|环球影城|卢浮宫|埃菲尔铁塔|凡尔赛宫|奥赛博物馆|塞纳河游船|涩谷SKY|滨海湾花园|大英博物馆|伦敦眼|故宫|外滩|西湖)",
+        message,
+        re.I,
+    )
+    if m_attr_kw:
+        attraction_keyword = m_attr_kw.group(1)
+
+    # Check if user is asking for global transport passes / rail passes / airport express / European trains
+    asking_global_passes = any(
+        k in message
+        for k in [
+            "交通卡",
+            "乘车券",
+            "地铁券",
+            "地铁卡",
+            "JR",
+            "通票",
+            "半价卡",
+            "机场快线",
+            "八达通",
+            "西瓜卡",
+            "接送机",
+            "渡轮",
+            "当地交通",
+            "交通工具",
+            "欧铁",
+        ]
+    )
+    pass_keyword = None
+    m_pass_kw = re.search(
+        r"(关西机场快线|HARUKA|东京地铁券|瑞士通票|瑞士半价卡|香港机场快线|八达通|塞纳河游船|JR\s*Pass)",
+        message,
+        re.I,
+    )
+    if m_pass_kw:
+        pass_keyword = m_pass_kw.group(1)
+
+    is_euro_route = bool(
+        from_city
+        and to_city
+        and (from_city in EURO_RAIL_STATION_MAP or from_city.lower() in EURO_RAIL_STATION_MAP)
+        and (to_city in EURO_RAIL_STATION_MAP or to_city.lower() in EURO_RAIL_STATION_MAP)
+    )
+    asking_euro_trains = is_euro_route and not any(
+        k in message for k in ["只看机票", "只查机票"]
+    )
+
+    has_route_transport_kw = any(
+        k in message
+        for k in ["高铁", "动车", "火车", "12306", "机票", "飞机", "航班", "怎么去", "坐车", "飞"]
+    )
+    only_hotel = asking_hotels and not has_route_transport_kw and not asking_attractions and not asking_global_passes
+    only_attraction = (
+        asking_attractions
+        and (not cities_from_msg)
+        and not has_route_transport_kw
+        and not asking_hotels
+    )
+    only_global_pass = (
+        asking_global_passes
+        and (not cities_from_msg)
+        and not has_route_transport_kw
     )
     hotel_city = to_city or single_detected_city or default_to or default_from
     hotel_area_keyword = None
     if hotel_city and hotel_city in msg_for_cities:
         m_area = re.search(
-            re.escape(hotel_city) + r"[,，、\s]*([\u4e00-\u9fa5]{2,7}?)(?:旁边|附近|周边|商圈|一带|的)?[,，、\s]*(?:酒店|宾馆|住宿|民宿|房价|有什么|有哪些)",
+            re.escape(hotel_city) + r"[,，、\s]*([\u4e00-\u9fa5]{2,7}?)(?:旁边|附近|周边|商圈|一带|的)?[,，、\s]*(?:酒店|宾馆|住宿|民宿|房价)",
             msg_for_cities,
         )
         if m_area:
             cand = re.sub(r"(旁边|附近|周边|商圈|一带|的)+$", "", m_area.group(1).strip()).strip()
-            if cand and cand not in ("有哪些", "有什么", "附近", "周边", "旁边", "便宜", "高分", "好"):
+            bad_area_tokens = ("有哪些", "有什么", "附近", "周边", "旁边", "便宜", "高分", "好", "高铁", "火车", "动车", "机票", "飞机", "航班", "门票", "景点", "和", "跟", "以及")
+            if cand and not any(bt in cand for bt in bad_area_tokens):
                 hotel_area_keyword = cand
 
     # Check if user is asking for a specific train code's stopovers (e.g. G1632)
@@ -272,7 +365,7 @@ def parse_user_intent(
         days
         or any(
             k in message
-            for k in ["行程", "攻略", "规划", "安排", "怎么玩", "游玩", "旅游", "度假", "景点", "美食"]
+            for k in ["行程", "攻略", "规划", "安排", "怎么玩", "游玩", "旅游", "度假", "美食"]
         )
     )
     if not days:
@@ -285,7 +378,9 @@ def parse_user_intent(
     only_flight = any(k in message for k in ["机票", "飞机", "航班", "直飞", "航司"]) and not any(
         k in message for k in ["高铁", "火车", "12306", "对比", "划算", "还是"]
     )
-    asking_transfer = any(k in message for k in ["中转", "换乘", "联程", "转车"])
+    asking_transfer = any(
+        k in message for k in ["中转", "换乘", "联程", "转车", "转机", "空铁", "方案"]
+    )
 
     budget = None
     m_budget = re.search(r"预算\s*(\d{3,5})", message) or re.search(
@@ -317,9 +412,17 @@ def parse_user_intent(
         "only_train": only_train,
         "only_flight": only_flight,
         "only_hotel": only_hotel,
+        "only_attraction": only_attraction,
+        "only_global_pass": only_global_pass,
         "asking_hotels": asking_hotels or needs_itinerary,
         "hotel_city": hotel_city,
         "hotel_area_keyword": hotel_area_keyword,
+        "asking_attractions": asking_attractions or needs_itinerary,
+        "attraction_city": attraction_city,
+        "attraction_keyword": attraction_keyword,
+        "asking_euro_trains": asking_euro_trains,
+        "asking_global_passes": asking_global_passes,
+        "pass_keyword": pass_keyword,
         "asking_stopovers": asking_stopovers,
         "asking_transfer": asking_transfer,
         "train_code_query": train_code_query,
@@ -366,18 +469,23 @@ def ai_route_tools(
         f"上一轮对话记忆上下文：出发地={ctx.get('from_city') or '无'}, 目的地={ctx.get('to_city') or '无'}, 日期={ctx.get('date') or '无'}。\n\n"
         "【可用实时工具规范 (Tool Specifications)】：\n"
         "1. `query_trains`: 查询中国大陆 12306 火车/高铁/动车实时余票与票价。参数：`from_city`(出发城市/县), `to_city`(到达城市/县), `date`(YYYY-MM-DD)。\n"
-        "2. `query_flights`: 查询中国国内民航实时低价航班。参数：`from_city`, `to_city`, `date`(YYYY-MM-DD)。\n"
-        "3. `query_hotels`: 查询全球及全国城市/县城实时酒店房价（支持国内市县如上海/玉山，也支持海外城市如河内/胡志明市/东京/曼谷/新加坡/首尔等）。参数：`hotel_city`(酒店所在城市纯名称，如'河内'、'上海'、'玉山'), `date`(入住日期 YYYY-MM-DD), `hotel_area_keyword`(商圈/机场/地标纯关键词，如用户说'机场旁边'则填'机场'，说'外滩附近'则填'外滩'，没有则填 null)。\n"
-        "4. `query_stopovers`: 查询指定车次（如 G1632）途经的所有经停站时刻表。参数：`train_code_query`(车次号)。\n"
-        "5. `query_transfers`: 查询 12306 全国枢纽中转换乘方案（当用户问中转/换乘时调用）。\n\n"
+        "2. `query_flights`: 查询中国国内及全球国际/跨境航线实时机票价格。参数：`from_city`, `to_city`, `date`(YYYY-MM-DD)。\n"
+        "3. `query_hotels`: 查询全球各国及全国城市/县城实时酒店房价（支持巴黎/伦敦/东京/曼谷/新加坡/河内/纽约/悉尼/上海/玉山等）。参数：`hotel_city`, `date`, `hotel_area_keyword`。\n"
+        "4. `query_attractions`: 查询全球各国及国内城市必去景点、博物馆、乐园、游船及实时门票价格（如卢浮宫/东京迪士尼/新加坡环球影城/埃菲尔铁塔/故宫）。参数：`attraction_city`, `attraction_keyword`。\n"
+        "5. `query_euro_trains`: 查询欧洲跨国与城际铁路实时时刻表（法铁TGV、德铁ICE、瑞铁SBB、意铁等，如巴黎→苏黎世、法兰克福→慕尼黑、日内瓦→采尔马特）。\n"
+        "6. `query_global_passes`: 查询全球各国当地交通工具卡券、铁路通票、机场快线与渡轮（如日本JR HARUKA、瑞士半价卡、香港机场快线、东京地铁券）。\n"
+        "7. `query_stopovers`: 查询指定车次（如 G1632）途经的所有经停站时刻表。参数：`train_code_query`(车次号)。\n"
+        "8. `query_transfers`: 查询 12306 全国枢纽中转换乘方案（当用户问中转/换乘时调用）。\n\n"
         "请根据用户的自然语言输入，自主决定应该调用哪些工具，并只输出如下合法 JSON 对象（不要输出任何 Markdown 代码块或多余解释）：\n"
         "{\n"
-        '  "tools": ["query_hotels"], // 从 ["query_trains", "query_flights", "query_hotels", "query_stopovers", "query_transfers"] 中按需选择1个或多个\n'
+        '  "tools": ["query_hotels", "query_attractions"], // 从上述工具名中按需选择1个或多个\n'
         '  "from_city": "出发城市或空字符串",\n'
         '  "to_city": "到达城市或空字符串",\n'
         '  "date": "YYYY-MM-DD",\n'
-        '  "hotel_city": "酒店所在城市（如只查酒店也必填，例如 河内/上海）",\n'
+        '  "hotel_city": "酒店所在城市（例如 巴黎/河内/上海）",\n'
         '  "hotel_area_keyword": "机场 / 外滩 / 西湖 等纯地标词，无则填 null",\n'
+        '  "attraction_city": "景点门票所在城市（例如 巴黎/东京/新加坡）",\n'
+        '  "attraction_keyword": "具体景点词如 卢浮宫/迪士尼，无则填 null",\n'
         '  "train_code_query": "G1632 等车次号，无则填 null",\n'
         '  "needs_itinerary": false, // 用户是否要求规划多日游玩行程/旅游攻略\n'
         '  "days": 2 // 游玩天数\n'
@@ -399,6 +507,8 @@ def ai_route_tools(
                 from_c = (ai_plan.get("from_city") or "").strip() or base_intent["from_city"]
                 to_c = (ai_plan.get("to_city") or "").strip() or base_intent["to_city"]
                 hotel_c = (ai_plan.get("hotel_city") or "").strip() or to_c or base_intent["hotel_city"]
+                attr_c = (ai_plan.get("attraction_city") or "").strip() or to_c or hotel_c or base_intent["attraction_city"]
+                attr_kw = ai_plan.get("attraction_keyword") or base_intent.get("attraction_keyword")
                 area_kw = ai_plan.get("hotel_area_keyword")
                 if isinstance(area_kw, str):
                     area_kw = re.sub(r"(旁边|附近|周边|一带|商圈|的|酒店|价格|房价)+$", "", area_kw.strip()).strip() or None
@@ -414,11 +524,14 @@ def ai_route_tools(
                 want_trains = "query_trains" in tools
                 want_flights = "query_flights" in tools
                 want_hotels = "query_hotels" in tools or bool(ai_plan.get("needs_itinerary"))
+                want_attractions = "query_attractions" in tools or base_intent["asking_attractions"]
+                want_euro_trains = "query_euro_trains" in tools or base_intent["asking_euro_trains"]
+                want_global_passes = "query_global_passes" in tools or base_intent["asking_global_passes"]
                 want_stopovers = "query_stopovers" in tools
                 want_transfers = "query_transfers" in tools
 
-                # If user only asked for hotels (e.g., "河内，机场旁边，酒店价格，下周一")
-                only_hotel = want_hotels and (not want_trains) and (not want_flights)
+                only_hotel = want_hotels and (not want_trains) and (not want_flights) and (not want_euro_trains) and (not want_attractions)
+                only_attraction = want_attractions and (not want_trains) and (not want_flights) and (not want_euro_trains) and (not want_hotels)
                 only_train = want_trains and (not want_flights)
                 only_flight = want_flights and (not want_trains)
 
@@ -427,16 +540,22 @@ def ai_route_tools(
                     "router_mode": "ai_tool_spec",
                     "tools": tools,
                     "from_city": from_c,
-                    "to_city": to_c or hotel_c,
+                    "to_city": to_c or hotel_c or attr_c,
                     "date": date_val,
                     "days": int(ai_plan.get("days") or base_intent["days"] or 2),
                     "needs_itinerary": bool(ai_plan.get("needs_itinerary") or base_intent["needs_itinerary"]),
                     "only_train": only_train,
                     "only_flight": only_flight,
                     "only_hotel": only_hotel,
+                    "only_attraction": only_attraction,
                     "asking_hotels": want_hotels,
                     "hotel_city": hotel_c,
                     "hotel_area_keyword": area_kw,
+                    "asking_attractions": want_attractions,
+                    "attraction_city": attr_c,
+                    "attraction_keyword": attr_kw,
+                    "asking_euro_trains": want_euro_trains,
+                    "asking_global_passes": want_global_passes,
                     "asking_stopovers": want_stopovers or base_intent["asking_stopovers"],
                     "asking_transfer": want_transfers or base_intent["asking_transfer"],
                     "train_code_query": ai_plan.get("train_code_query") or base_intent["train_code_query"],
@@ -457,6 +576,9 @@ def call_llm_raw(
     Call DeepSeek V4.1 / DeepSeek V4 (via Aliyun DashScope Official Node) with zero TLS drops.
     Returns (raw_text, actual_model_name, last_error).
     """
+    if not DASHSCOPE_API_KEY or os.environ.get("SKIP_LLM") == "1":
+        return None, None, "未配置或已跳过 LLM_API_KEY"
+
     candidate_models = [preferred_model]
     for fallback_m in [
         "deepseek-v4.1-flash",
@@ -639,15 +761,25 @@ def generate_chat_response(
     transfers: List[Dict[str, Any]],
     comparison: Dict[str, Any],
     history: List[Dict[str, str]],
+    attractions: Optional[List[Dict[str, Any]]] = None,
+    euro_trains: Optional[List[Dict[str, Any]]] = None,
+    global_passes: Optional[List[Dict[str, Any]]] = None,
+    destination_essentials: Optional[Dict[str, Any]] = None,
     preferred_model: str = "deepseek-v4.1-flash",
 ) -> Dict[str, Any]:
     """
     Generate natural conversational AI response grounded in live tool data.
     If intent['needs_itinerary'] is True, also asks the LLM to include a structured itinerary card.
     """
+    attractions = attractions or []
+    euro_trains = euro_trains or []
+    global_passes = global_passes or []
+    destination_essentials = destination_essentials or {}
+
     from_city = intent.get("from_city", "")
     to_city = intent.get("to_city", "")
     hotel_city = intent.get("hotel_city") or to_city
+    attraction_city = intent.get("attraction_city") or to_city or hotel_city
     date_str = intent.get("date", "")
     needs_itinerary = intent.get("needs_itinerary", False)
 
@@ -655,6 +787,10 @@ def generate_chat_response(
     trains_brief = [
         f"{t['train_code']}({t['from_station']} {t['dep_time']}->{t['to_station']} {t['arr_time']}, 历时{t['duration_text']}, 最低¥{t['lowest_price']}, 余票:{'有票' if t['can_buy'] else '候补/无'}, 席别:{'/'.join(s['name']+str(s['price'])+'元('+s['available']+')' for s in t['seats'][:3])})"
         for t in trains[:10]
+    ]
+    euro_trains_brief = [
+        f"{et['train_code']}({et['from_station']} {et['dep_time']}->{et['to_station']} {et['arr_time']}, 历时{et['duration_text']}, 换乘{et.get('transfers', 0)}次, 运营商:{et.get('operators', '')})"
+        for et in euro_trains[:8]
     ]
     flights_brief = [
         f"{f['flight_no']} {f['airline_short']}({f['dep_airport_short']}{f['dep_terminal']} {f['dep_time']}->{f['arr_airport_short']}{f['arr_terminal']} {f['arr_time']}, 历时{f['duration_text']}, ¥{f['lowest_price']} {f['economy_desc']}, {f['meal']})"
@@ -664,9 +800,21 @@ def generate_chat_response(
         f"{h['name']}({h['star']}星, 评分:{h['score']}{h['score_desc']}, 实时价:¥{h['price']}, 区域:{h['zone'] or h['position_desc']}, 评价:{h['quote']})"
         for h in hotels[:8]
     ]
+    attractions_brief = [
+        f"{a['name']}(评分:{a.get('score')}分/{a.get('comment_text','')}, 门票:{'免费' if a.get('is_free') else ('¥'+str(a.get('price')) if a.get('price') else '详询')}, 外币参考:{a.get('foreign_price') or '-'}, 票种:{a.get('ticket_name') or '-'}, 开放:{a.get('open_time') or '-'}, 排名:{a.get('ranking_text') or '-'})"
+        for a in attractions[:8]
+    ]
+    passes_brief = [
+        f"{p['name']}(类型:{p.get('category')}, 评分:{p.get('score') or '-'}, 销量:{p.get('monthly_sales') or '-'}, 套餐:{'/'.join(p.get('packages',[])[:3])})"
+        for p in global_passes[:6]
+    ]
     stops_brief = [
         f"{s.get('station_no')}.{s.get('station_name')}(到:{s.get('arrive_time')}, 发:{s.get('start_time')}, 停:{s.get('stopover_time')})"
         for s in stopovers
+    ]
+    transfers_brief = [
+        f"{tr.get('badge_text', '智能中转')}(经{tr.get('hub_city')}中转/{tr.get('wait_text','')}, 第一程:{tr['leg1'].get('code')} {tr['leg1'].get('from_station')} {tr['leg1'].get('dep_time')}->{tr['leg1'].get('to_station')} {tr['leg1'].get('arr_time')} ¥{tr['leg1'].get('lowest_price')}, 第二程:{tr['leg2'].get('code')} {tr['leg2'].get('from_station')}->{tr['leg2'].get('to_station')} ¥{tr['leg2'].get('lowest_price')}, 联程总价:¥{tr.get('total_lowest_price')}, 总耗时:{tr.get('total_duration_text')})"
+        for tr in transfers[:4]
     ]
 
     hist_text = ""
@@ -678,21 +826,21 @@ def generate_chat_response(
 
     if needs_itinerary:
         system_prompt = (
-            "你是一个简洁、专业的个人票务、酒店与行程助手。系统已经在气泡上方渲染了实时车次/机票/酒店卡片组件。\n"
-            "请严格基于下方提供的【实时12306车次】、【实时航班】与【实时酒店房价】真实数据，返回合法的纯 JSON 对象（不要多余代码块包裹）：\n"
+            "你是一个简洁、专业的全球票务、酒店、景点门票与行程助手。系统已经在气泡上方渲染了实时车次/欧洲列车/国际国内机票/酒店/全球景点门票与交通通票卡片组件。\n"
+            "请严格基于下方提供的【实时车次/欧洲列车】、【实时航班】、【实时酒店房价】与【实时景点门票/交通卡】真实数据，返回合法的纯 JSON 对象（不要多余代码块包裹）：\n"
             "{\n"
-            '  "reply": "用自然亲切的口吻简明回答用户（100~150字），点出最推荐的具体真实车次/航班/酒店及原因",\n'
+            '  "reply": "用自然亲切的口吻简明回答用户（100~160字），点出最推荐的具体真实车次/航班/酒店/景点门票及原因",\n'
             '  "itinerary": {\n'
-            '    "title": "行程标题 (如：玉山 ➔ 上海 · 2日周末精华游)",\n'
-            '    "budget_total": 1200,\n'
-            '    "hotel_tip": "点名推荐上方实时检出的具体酒店名称、实时房价及地铁换乘说明",\n'
+            '    "title": "行程标题 (如：上海 ➔ 东京 · 3日精华游)",\n'
+            '    "budget_total": 3500,\n'
+            '    "hotel_tip": "点名推荐上方实时检出的具体酒店名称、实时房价及位置说明",\n'
             '    "days": [\n'
             '      {\n'
             '        "day": 1,\n'
             '        "date": "YYYY-MM-DD",\n'
             '        "theme": "当日主题",\n'
             '        "items": [\n'
-            '          {"time": "08:40", "title": "真实车次/航班/真实酒店或景点餐厅名称", "location": "具体车站/地址", "detail": "简明贴士", "cost": 235}\n'
+            '          {"time": "09:00", "title": "真实车次/航班/真实酒店或真实景点门票名称", "location": "具体车站/机场/景点区域", "detail": "简明贴士（含门票价/外币价/开放时间等）", "cost": 235}\n'
             '        ]\n'
             '      }\n'
             '    ]\n'
@@ -701,18 +849,23 @@ def generate_chat_response(
         )
     else:
         system_prompt = (
-            "你是一个极简、干练的个人票务、机票与酒店 AI 助手。系统已经在你的回复气泡里内嵌展示了【实时12306车次表/机票表/携程实时酒店房价表】可视化组件。\n"
-            "因此你不需要把所有列表再机械罗列一遍，而是直接针对用户的提问，基于真实数据给出最实用的挑选建议（例如：高性价比选哪家、高分豪华选哪家、早班赶路选哪趟车/航班、最快或最省钱是哪个）。\n"
-            "严禁编造数据！直接输出精炼、好读的 Markdown 文本（控制在 120~220 字以内，条理清晰）。"
+            "你是一个极简、干练的全球票务、机票、跨国列车、酒店与景点门票 AI 助手。系统已经在你的回复气泡里内嵌展示了【实时车次表/欧洲铁路表/机票表/携程实时酒店房价表/全球景点门票与交通卡】可视化组件。\n"
+            "因此你不需要把所有列表再机械罗列一遍，而是直接针对用户的提问，基于真实数据给出最实用的挑选建议（例如：高性价比选哪家、必玩景点门票多少钱、外币折算多少、早班赶路选哪趟车/航班）。\n"
+            "严禁编造数据！直接输出精炼、好读的 Markdown 文本（控制在 120~240 字以内，条理清晰）。"
         )
 
     user_prompt = (
         f"{hist_text}\n"
         f"【当前用户提问】：{user_message}\n"
-        f"【解析路线参数】：{from_city} -> {to_city} (酒店城市: {hotel_city}) | 日期：{date_str} | 天数：{intent.get('days')}天\n"
+        f"【解析路线参数】：{from_city} -> {to_city} (酒店城市: {hotel_city}, 景点城市: {attraction_city}) | 日期：{date_str} | 天数：{intent.get('days')}天\n"
         f"【12306 实时检出车次（共{len(trains)}趟，前10趟明细）】：{json.dumps(trains_brief, ensure_ascii=False)}\n"
-        f"【OTA 实时检出航班（共{len(flights)}架次）】：{json.dumps(flights_brief, ensure_ascii=False)}\n"
-        f"【携程/Trip.com 实时检出酒店（共{len(hotels)}家）】：{json.dumps(hotels_brief, ensure_ascii=False)}\n"
+        f"【欧洲跨国/城际铁路实时车次（共{len(euro_trains)}趟）】：{json.dumps(euro_trains_brief, ensure_ascii=False)}\n"
+        f"【OTA 实时检出国内/国际航班（共{len(flights)}架次）】：{json.dumps(flights_brief, ensure_ascii=False)}\n"
+        f"【智能中转方案（空铁联运/同站换乘/枢纽转机，共{len(transfers)}套）】：{json.dumps(transfers_brief, ensure_ascii=False)}\n"
+        f"【携程/Trip.com 实时检出全球酒店（共{len(hotels)}家）】：{json.dumps(hotels_brief, ensure_ascii=False)}\n"
+        f"【全球景点门票实时数据（共{len(attractions)}个）】：{json.dumps(attractions_brief, ensure_ascii=False)}\n"
+        f"【全球交通通票/地铁卡/机场快线/游船（共{len(global_passes)}项）】：{json.dumps(passes_brief, ensure_ascii=False)}\n"
+        + (f"【目的地实时汇率与当地时区】：{json.dumps(destination_essentials, ensure_ascii=False)}\n" if destination_essentials else "")
         + (f"【列车经停站时刻表】：{json.dumps(stops_brief, ensure_ascii=False)}\n" if stops_brief else "")
         + (f"【空铁比价结论】：{comparison.get('recommendation_reason', '')}\n" if comparison else "")
     )
@@ -722,11 +875,151 @@ def generate_chat_response(
     )
 
     if not raw_text:
+        bullets = []
+        if trains:
+            t0 = trains[0]
+            bullets.append(
+                f"- **12306 实时铁路**：共检出 **{len(trains)}** 趟列车，首推 **{t0['train_code']}**（{t0['from_station']} `{t0['dep_time']}` ➔ {t0['to_station']} `{t0['arr_time']}`，历时 {t0['duration_text']}，最低 **¥{t0['lowest_price']}**）。"
+            )
+        if euro_trains:
+            et0 = euro_trains[0]
+            bullets.append(
+                f"- **欧洲铁路实时班次**：共检出 **{len(euro_trains)}** 趟跨国/城际列车，推荐 **{et0['train_code']}**（{et0['from_station']} `{et0['dep_time']}` ➔ {et0['to_station']} `{et0['arr_time']}`，历时 {et0['duration_text']}，换乘 {et0.get('transfers', 0)} 次）。"
+            )
+        if flights:
+            f0 = min(flights, key=lambda x: x.get("lowest_price") or 999999)
+            bullets.append(
+                f"- **实时航班报价**：共检出 **{len(flights)}** 个航班方案，优选 **{f0['flight_no']}**（{f0['airline_short']}，含税/最低 **¥{f0['lowest_price']}** 起，{f0['economy_desc']}）。"
+            )
+        if transfers:
+            tr0 = transfers[0]
+            bullets.append(
+                f"- **智能中转方案**：为您匹配 **{len(transfers)}** 套中转联程，优选 **{tr0.get('badge_text', '智能中转')}**（经 **{tr0.get('hub_city')}** 换乘，`{tr0['leg1'].get('code')}` + `{tr0['leg2'].get('code')}`，两程合计仅 **¥{tr0.get('total_lowest_price')}**）。"
+            )
+        if hotels:
+            h_top = hotels[0]
+            h_cheap = min(hotels, key=lambda x: x.get("price") or 999999)
+            bullets.append(
+                f"- **全球实时酒店（{hotel_city}）**：共检出 **{len(hotels)}** 家在售酒店；口碑首选 **{h_top['name']}**（{h_top['score']}分，**¥{h_top['price']}**/晚），高性价比可选 **{h_cheap['name']}**（**¥{h_cheap['price']}**/晚）。"
+            )
+        if attractions:
+            paid_attrs = [a for a in attractions if a.get("price")]
+            a0 = paid_attrs[0] if paid_attrs else attractions[0]
+            price_str = f"¥{a0['price']}" + (f" / 约 {a0['foreign_price']}" if a0.get("foreign_price") else "") if a0.get("price") else "免费开放"
+            bullets.append(
+                f"- **全球景点与门票（{attraction_city}）**：共检出 **{len(attractions)}** 个热门景点；首推 **{a0['name']}**（{a0.get('score')}分，实时票价 **{price_str}**，{a0.get('open_time') or '全天开放'}）。"
+            )
+        if global_passes:
+            p0 = global_passes[0]
+            routes_str = " / ".join(p0.get("packages", [])[:3])
+            bullets.append(
+                f"- **当地交通卡/通票/船票**：共检出 **{len(global_passes)}** 项通票服务，推荐 **{p0['name']}**（{p0.get('category')}，{p0.get('monthly_sales') or '官方直连'}{f'，含 {routes_str}' if routes_str else ''}）。"
+            )
+        if destination_essentials and destination_essentials.get("fx_rate_text"):
+            fx_txt = destination_essentials.get("fx_rate_text")
+            lt = destination_essentials.get("local_time")
+            tz_d = destination_essentials.get("timezone_desc")
+            tz_txt = f"，当地时间 `{lt}`（{tz_d}）" if lt else ""
+            bullets.append(
+                f"- **实时汇率与时区（{destination_essentials.get('country') or ''}·{destination_essentials.get('city') or ''}）**：`{fx_txt}`{tz_txt}。"
+            )
+
+        summary_reply = (
+            "已通过全球公开接口为您实时抓取最新票务、酒店与门票数据，核心精选如下：\n\n"
+            + ("\n".join(bullets) if bullets else "已在上方卡片为您展示实时查询结果。")
+        )
+
+        fallback_itinerary = None
+        if needs_itinerary:
+            days_cnt = max(1, min(int(intent.get("days") or 2), 5))
+            day_list = []
+            total_cost = 0
+            for d_idx in range(1, days_cnt + 1):
+                items = []
+                if d_idx == 1:
+                    if trains:
+                        t0 = trains[0]
+                        c = int(t0.get("lowest_price") or 0)
+                        total_cost += c
+                        items.append({
+                            "time": t0.get("dep_time") or "09:00",
+                            "title": f"搭乘 {t0['train_code']} 次列车前往{to_city}",
+                            "location": f"{t0['from_station']} ➔ {t0['to_station']}",
+                            "detail": f"历时 {t0['duration_text']}，实时票价 ¥{c}",
+                            "cost": c,
+                        })
+                    elif euro_trains:
+                        et0 = euro_trains[0]
+                        items.append({
+                            "time": et0.get("dep_time") or "09:00",
+                            "title": f"搭乘欧洲铁路 {et0['train_code']} ({et0.get('operator','')})",
+                            "location": f"{et0['from_station']} ➔ {et0['to_station']}",
+                            "detail": f"历时 {et0['duration_text']}，换乘 {et0.get('transfers',0)} 次",
+                            "cost": 0,
+                        })
+                    elif flights:
+                        f0 = flights[0]
+                        c = int(f0.get("lowest_price") or 0)
+                        total_cost += c
+                        items.append({
+                            "time": f0.get("dep_time") or "10:00",
+                            "title": f"搭乘 {f0['flight_no']} ({f0['airline_short']}) 飞往{to_city}",
+                            "location": f"{f0['dep_airport_short']} ➔ {f0['arr_airport_short']}",
+                            "detail": f"{f0['economy_desc']}，实时含税/最低 ¥{c}",
+                            "cost": c,
+                        })
+                    if hotels:
+                        h0 = hotels[0]
+                        c = int(h0.get("price") or 0)
+                        total_cost += c
+                        items.append({
+                            "time": "14:00",
+                            "title": f"办理入住：{h0['name']}",
+                            "location": h0.get("zone") or h0.get("position_desc") or hotel_city,
+                            "detail": f"携程评分 {h0.get('score')}分（{h0.get('score_desc')}），实时房价 ¥{c}/晚",
+                            "cost": c,
+                        })
+                attr_slice = attractions[(d_idx - 1) * 2 : d_idx * 2]
+                for idx_a, attr in enumerate(attr_slice):
+                    c = int(attr.get("price") or 0)
+                    total_cost += c
+                    items.append({
+                        "time": "15:30" if idx_a == 0 else "18:30",
+                        "title": f"游览：{attr['name']}",
+                        "location": attr.get("zone") or attr.get("city_name") or attraction_city,
+                        "detail": f"{attr.get('ranking_text') or attr.get('comment_text') or '热门必打卡'} | 门票：{'¥'+str(c) if c else '免费'}{(' ('+attr['foreign_price']+')') if attr.get('foreign_price') else ''} | {attr.get('open_time') or '常规开放'}",
+                        "cost": c,
+                    })
+                if not items:
+                    items.append({
+                        "time": "10:00",
+                        "title": f"{to_city or hotel_city}城市漫游与当地美食探索",
+                        "location": to_city or hotel_city,
+                        "detail": "结合上方实时票务与交通卡灵活安排",
+                        "cost": 200,
+                    })
+                day_list.append({
+                    "day": d_idx,
+                    "date": date_str if d_idx == 1 else f"Day {d_idx}",
+                    "theme": f"{to_city or hotel_city}精选深度游 · 第{d_idx}天",
+                    "items": items,
+                })
+            fallback_itinerary = {
+                "title": f"{from_city + ' ➔ ' if from_city else ''}{to_city or hotel_city} · {days_cnt}日实时数据定制行程",
+                "budget_total": total_cost or 1500,
+                "hotel_tip": (
+                    f"推荐入住【{hotels[0]['name']}】（¥{hotels[0]['price']}/晚，位于{hotels[0].get('zone') or hotels[0].get('position_desc') or '核心区'}）"
+                    if hotels
+                    else f"建议选择 {to_city or hotel_city} 核心地铁沿线酒店"
+                ),
+                "days": day_list,
+            }
+
         return {
-            "ok": False,
-            "model": "error",
-            "reply": f"⚠️ 大模型响应超时 ({err or '网络波动'})，但上方组件中已为您展示实时抓取到的 12306 与航班真实数据。",
-            "itinerary": None,
+            "ok": True,
+            "model": "live-data-engine",
+            "reply": summary_reply,
+            "itinerary": fallback_itinerary,
         }
 
     if needs_itinerary:
