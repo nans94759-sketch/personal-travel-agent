@@ -1,14 +1,21 @@
 """Indicative high-speed-rail timings between major city pairs.
 
-These are representative durations for the fastest sensible connection, not a
-live timetable. The UI must label them as indicative and point users to the
-booking link for confirmed times. Live seat data requires an affiliate feed,
-which this branch does not have yet.
+PROVENANCE — read this before trusting the numbers:
+these are editorial estimates written from general knowledge of the Chinese
+high-speed network, NOT values pulled from a timetable or an API. They are
+labelled `typical` in the UI, and anything missing falls back to a
+distance-based estimate labelled `estimated`. Expect individual values to be
+off by 30-60 minutes. Re-verify against Trip.com before quoting them as fact.
+
+Live seat data requires an affiliate feed, which this branch does not have yet.
 """
 
 from __future__ import annotations
 
 from typing import Dict, Optional, Tuple
+
+AS_OF = "2026-10"
+SOURCE = "editorial estimate, not a live timetable"
 
 # minutes, keyed by the two city keys sorted alphabetically
 TYPICAL_RAIL_MINUTES: Dict[Tuple[str, str], int] = {
