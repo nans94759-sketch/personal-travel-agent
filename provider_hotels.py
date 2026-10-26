@@ -394,6 +394,33 @@ class HotelScraperClient:
             address = to_simplified(pos.get("address", ""))
             zones = [to_simplified(z) for z in (pos.get("zoneNames") or [])]
 
+            lat_val: Optional[float] = None
+            lon_val: Optional[float] = None
+            map_coords = pos.get("mapCoordinate") or []
+            if isinstance(map_coords, list) and map_coords:
+                # Prefer explicit WGS84 entry first, otherwise convert GCJ02/BD09 to WGS84
+                chosen_mc = next(
+                    (
+                        mc
+                        for mc in map_coords
+                        if str(mc.get("gcoordType") or "").upper() == "WGS84"
+                    ),
+                    map_coords[0],
+                )
+                try:
+                    raw_lat = float(chosen_mc.get("latitude") or 0.0)
+                    raw_lon = float(chosen_mc.get("longitude") or 0.0)
+                    if abs(raw_lat) > 0.01 and abs(raw_lon) > 0.01:
+                        from provider_map import normalize_to_wgs84
+
+                        wlat, wlon = normalize_to_wgs84(
+                            raw_lat, raw_lon, str(chosen_mc.get("gcoordType") or "WGS84")
+                        )
+                        lat_val = round(wlat, 6)
+                        lon_val = round(wlon, 6)
+                except Exception:
+                    pass
+
             price = pi.get("price") or 0
             delete_price = pi.get("deletePrice") or 0
             tax_note = to_simplified(pi.get("priceExplanation", ""))
@@ -409,6 +436,8 @@ class HotelScraperClient:
                     "position_desc": pos_desc,
                     "address": address,
                     "zone": zones[0] if zones else "",
+                    "lat": lat_val,
+                    "lon": lon_val,
                     "price": price,
                     "original_price": delete_price if delete_price > price else None,
                     "tax_note": tax_note,

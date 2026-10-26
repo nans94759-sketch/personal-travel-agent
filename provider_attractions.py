@@ -358,6 +358,24 @@ class GlobalAttractionClient:
                 features = [to_simplified(f) for f in (c.get("shortFeatures") or []) if f]
                 tags = [to_simplified(t) for t in (c.get("tagNameList") or []) if t]
 
+                lat_val: Optional[float] = None
+                lon_val: Optional[float] = None
+                coord_obj = c.get("coordinate") or {}
+                if isinstance(coord_obj, dict):
+                    try:
+                        rlat = float(coord_obj.get("latitude") or 0.0)
+                        rlon = float(coord_obj.get("longitude") or 0.0)
+                        if abs(rlat) > 0.01 and abs(rlon) > 0.01:
+                            from provider_map import normalize_to_wgs84
+
+                            wlat, wlon = normalize_to_wgs84(
+                                rlat, rlon, str(coord_obj.get("coordinateType") or "WGS84")
+                            )
+                            lat_val = round(wlat, 6)
+                            lon_val = round(wlon, 6)
+                    except Exception:
+                        pass
+
                 results.append(
                     {
                         "name": name,
@@ -366,6 +384,8 @@ class GlobalAttractionClient:
                         "business_id": c.get("businessId"),
                         "district_name": to_simplified(c.get("districtName") or ""),
                         "address": to_simplified(c.get("address") or ""),
+                        "lat": lat_val,
+                        "lon": lon_val,
                         "distance": dist_str,
                         "score": score,
                         "review_count": review_count,
@@ -439,6 +459,21 @@ class GlobalAttractionClient:
                         if mp:
                             price_val = int(round(float(mp.group(1))))
 
+                lat_val: Optional[float] = None
+                lon_val: Optional[float] = None
+                try:
+                    rlat = float(item.get("lat") or (bd.get("coordInfo") or {}).get("lat") or 0.0)
+                    rlon = float(item.get("lon") or (bd.get("coordInfo") or {}).get("lng") or 0.0)
+                    if abs(rlat) > 0.01 and abs(rlon) > 0.01:
+                        from provider_map import is_in_mainland_china, normalize_to_wgs84
+
+                        ctype = "GCJ02" if is_in_mainland_china(rlat, rlon) else "WGS84"
+                        wlat, wlon = normalize_to_wgs84(rlat, rlon, ctype)
+                        lat_val = round(wlat, 6)
+                        lon_val = round(wlon, 6)
+                except Exception:
+                    pass
+
                 open_time = (bd.get("openInfo") or {}).get("openTime") or "详见景区公告"
                 rank_desc = (bd.get("rankingInfo") or {}).get("description") or ""
                 results.append(
@@ -449,6 +484,8 @@ class GlobalAttractionClient:
                         "business_id": bd.get("businessId"),
                         "district_name": to_simplified(bd.get("districtName") or ""),
                         "address": to_simplified(bd.get("address") or ""),
+                        "lat": lat_val,
+                        "lon": lon_val,
                         "distance": "",
                         "score": bd.get("commentScore") or 4.7,
                         "review_count": bd.get("commentCount") or 0,

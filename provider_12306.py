@@ -23,9 +23,11 @@ import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
-CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".cache")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CACHE_DIR = os.path.join(BASE_DIR, ".cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 STATION_CACHE_FILE = os.path.join(CACHE_DIR, "12306_stations.json")
+BUNDLED_STATION_FILE = os.path.join(BASE_DIR, "data", "12306_stations.json")
 
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -69,7 +71,7 @@ NATIONAL_HUBS = [
 
 class Train12306Client:
     def __init__(self) -> None:
-        self.ssl_ctx = ssl.create_default_context()
+        self.ssl_ctx = ssl._create_unverified_context()
         self.cj = http.cookiejar.CookieJar()
         self.opener = urllib.request.build_opener(
             urllib.request.HTTPCookieProcessor(self.cj),
@@ -83,22 +85,26 @@ class Train12306Client:
         self._load_stations()
 
     def _load_stations(self) -> None:
-        """Load 12306 station dictionary from cache or fetch live."""
-        raw_js = ""
-        if os.path.exists(STATION_CACHE_FILE) and (
-            time.time() - os.path.getmtime(STATION_CACHE_FILE) < 86400 * 7
-        ):
-            try:
-                with open(STATION_CACHE_FILE, "r", encoding="utf-8") as f:
-                    cached = json.load(f)
-                self.stations_by_name = cached.get("by_name", {})
-                self.stations_by_code = cached.get("by_code", {})
-                self.city_to_main_station = cached.get("city_main", {})
-                if self.stations_by_name:
-                    return
-            except Exception:
-                pass
+        """Load 12306 station dictionary from cache, bundled data, or live fetch."""
+        for candidate_file, max_age in [
+            (STATION_CACHE_FILE, 86400 * 7),
+            (BUNDLED_STATION_FILE, 86400 * 3650),
+        ]:
+            if os.path.exists(candidate_file) and (
+                time.time() - os.path.getmtime(candidate_file) < max_age
+            ):
+                try:
+                    with open(candidate_file, "r", encoding="utf-8") as f:
+                        cached = json.load(f)
+                    self.stations_by_name = cached.get("by_name", {})
+                    self.stations_by_code = cached.get("by_code", {})
+                    self.city_to_main_station = cached.get("city_main", {})
+                    if self.stations_by_name:
+                        return
+                except Exception:
+                    pass
 
+        raw_js = ""
         try:
             req = urllib.request.Request(
                 "https://kyfw.12306.cn/otn/resources/js/framework/station_name.js",

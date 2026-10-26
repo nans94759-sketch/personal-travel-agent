@@ -8,7 +8,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB.svg)](https://www.python.org/)
-[![Dependencies](https://img.shields.io/badge/Dependencies-Zero-10B981.svg)](#快速开始)
+[![Dependencies](https://img.shields.io/badge/Dependencies-aiohttp-10B981.svg)](#快速开始)
 
 [**English**](README.md) | [**简体中文**](README_zh.md)
 
@@ -40,9 +40,10 @@
 仅需 **Python 3.9+** 即可运行：
 
 ```bash
-# 1. 克隆仓库
+# 1. 克隆仓库并安装依赖
 git clone https://github.com/nans94759-sketch/personal-travel-agent.git
 cd personal-travel-agent
+pip install -r requirements.txt
 
 # 2. 配置大模型密钥
 cp .env.example .env
