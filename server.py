@@ -57,11 +57,13 @@ async def handle_index(request: web.Request) -> web.FileResponse:
 
 
 def _inbound_request(payload: Dict[str, Any]) -> Dict[str, Any]:
+    lang = (payload.get("lang") or "en").strip().lower()
     return {
         "cities": payload.get("cities") or [],
         "start": (payload.get("start") or "").strip(),
         "days": int(payload.get("days") or 7),
         "pace": (payload.get("pace") or "balanced").strip(),
+        "lang": lang if lang in ("en", "zh") else "en",
     }
 
 
@@ -69,7 +71,9 @@ def _inbound_plan(payload: Dict[str, Any]) -> Dict[str, Any]:
     from inbound import attach_links, build_plan
 
     req = _inbound_request(payload)
-    return attach_links(build_plan(req["cities"], req["start"], req["days"], req["pace"]))
+    return attach_links(
+        build_plan(req["cities"], req["start"], req["days"], req["pace"], req["lang"])
+    )
 
 
 async def handle_inbound_page(request: web.Request) -> web.FileResponse:
@@ -77,7 +81,10 @@ async def handle_inbound_page(request: web.Request) -> web.FileResponse:
 
 
 async def handle_inbound_cities(request: web.Request) -> web.Response:
-    from inbound import CITIES, popular
+    from inbound import CITIES, popular, ui_strings
+
+    lang = (request.query.get("lang") or "en").strip().lower()
+    lang = lang if lang in ("en", "zh") else "en"
 
     def _row(c: Any) -> Dict[str, Any]:
         return {
@@ -88,11 +95,15 @@ async def handle_inbound_cities(request: web.Request) -> web.Response:
             "days": c.days,
             "station": c.station,
             "highlights": c.highlights,
+            "highlights_zh": c.highlights_zh,
             "note": c.note,
+            "note_zh": c.note_zh,
         }
 
     return web.json_response(
         {
+            "lang": lang,
+            "strings": ui_strings(lang),
             "popular": [_row(c) for c in popular(8)],
             "all": [_row(c) for c in sorted(CITIES.values(), key=lambda x: x.en)],
             "affiliate_ready": bool(os.environ.get("TRIP_COM_ALLIANCEID")),
@@ -119,6 +130,7 @@ async def handle_inbound_print(request: web.Request) -> web.Response:
         "start": request.query.get("start") or "",
         "days": request.query.get("days") or 7,
         "pace": request.query.get("pace") or "balanced",
+        "lang": request.query.get("lang") or "en",
     }
     loop = asyncio.get_running_loop()
     plan = await loop.run_in_executor(None, _inbound_plan, payload)

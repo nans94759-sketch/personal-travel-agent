@@ -16,6 +16,7 @@ from typing import Callable, List, Tuple
 from . import CITIES, attach_links, build_plan, render, resolve
 from . import corridors
 from .data import BUNDLED_STATIONS
+from .i18n import STRINGS
 from .planner import allocate_days, order_cities
 
 CHECKS: List[Tuple[str, Callable[[], None]]] = []
@@ -139,6 +140,49 @@ def _allocation_floor() -> None:
     alloc = allocate_days(ordered, 5)
     assert all(a >= 1 for a in alloc)
     assert sum(alloc) == 5
+
+
+@check("每个城市都有等长的中英文亮点")
+def _bilingual_content() -> None:
+    for c in CITIES.values():
+        assert len(c.highlights) == len(c.highlights_zh), f"{c.key} 中英文亮点数量不一致"
+        assert all(h.strip() for h in c.highlights_zh), f"{c.key} 有空的亮点"
+        assert all(ord(h[0]) > 127 for h in c.highlights_zh), f"{c.key} 的亮点看起来不是中文"
+
+
+@check("中英文词条键位一致")
+def _i18n_parity() -> None:
+    en = set(STRINGS["en"])
+    zh = set(STRINGS["zh"])
+    assert not (en - zh), f"中文缺少词条: {sorted(en - zh)}"
+    assert not (zh - en), f"英文缺少词条: {sorted(zh - en)}"
+
+
+@check("中文模式输出中文行程")
+def _zh_plan() -> None:
+    plan = build_plan(["shanghai", "hangzhou"], "2026-11-02", 5, "balanced", "zh")
+    assert plan["lang"] == "zh"
+    assert "天中国行" in plan["title"], plan["title"]
+    first = plan["days"][0]["items"][0]
+    assert "抵达" in first["title"], first["title"]
+    assert plan["cities"][0]["name"] == "上海"
+    leg = plan["legs"][0]
+    assert leg["from"] == "上海" and leg["to"] == "杭州"
+
+
+@check("中文可打印页用中文标签")
+def _zh_render() -> None:
+    plan = attach_links(build_plan(["beijing"], "2026-11-02", 3, "balanced", "zh"))
+    page = render(plan)
+    assert 'lang="zh-CN"' in page
+    assert "逐日安排" in page
+    assert "护照" in page
+
+
+@check("语言参数非法时回退英文")
+def _lang_fallback() -> None:
+    plan = build_plan(["beijing"], "2026-11-02", 3, "balanced", "fr")
+    assert plan["lang"] == "en"
 
 
 def main() -> int:

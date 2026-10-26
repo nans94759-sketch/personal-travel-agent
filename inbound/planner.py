@@ -1,4 +1,4 @@
-"""Itinerary planner for inbound travellers.
+"""Itinerary planner for inbound travellers, bilingual.
 
 Pure computation: static city data plus great-circle distance. No network, no
 scraping, no LLM. That is deliberate — this module is what makes the paid
@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import datetime
 import math
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Sequence
 
 from . import corridors
-from .data import CITIES, City, get
+from .data import City, display_name, get, highlights_for
+from .i18n import mode_label, normalise, t
 
 RAIL_MAX_MINUTES = 330
 RAIL_KMH = 250.0
@@ -31,6 +32,20 @@ def haversine_km(a: City, b: City) -> float:
 
 def _round10(minutes: float) -> int:
     return int(round(minutes / 10.0) * 10)
+
+
+def fmt_duration(minutes: int, lang: str = "en") -> str:
+    h, m = divmod(int(minutes), 60)
+    if lang == "zh":
+        if h and m:
+            return f"{h} 小时 {m} 分"
+        if h:
+            return f"{h} 小时"
+        return f"{m} 分钟"
+    return f"{h}h{m:02d}" if h else f"{m}min"
+
+
+_fmt = fmt_duration
 
 
 def order_cities(keys: Sequence[str]) -> List[City]:
@@ -68,14 +83,15 @@ def allocate_days(cities: Sequence[City], total_days: int) -> List[int]:
     return alloc
 
 
-def build_leg(a: City, b: City) -> Dict[str, Any]:
+def build_leg(a: City, b: City, lang: str = "en") -> Dict[str, Any]:
+    lang = normalise(lang)
     distance = haversine_km(a, b)
     rail = corridors.rail_minutes(a.key, b.key)
 
     if rail is not None and rail <= RAIL_MAX_MINUTES:
         return {
-            "from": a.en,
-            "to": b.en,
+            "from": display_name(a, lang),
+            "to": display_name(b, lang),
             "mode": "train",
             "duration_min": rail,
             "distance_km": round(distance),
@@ -88,8 +104,8 @@ def build_leg(a: City, b: City) -> Dict[str, Any]:
     rail_estimate = rail if rail is not None else _round10(distance / RAIL_KMH * 60 + 30)
     if rail_estimate <= RAIL_MAX_MINUTES:
         return {
-            "from": a.en,
-            "to": b.en,
+            "from": display_name(a, lang),
+            "to": display_name(b, lang),
             "mode": "train",
             "duration_min": rail_estimate,
             "distance_km": round(distance),
@@ -100,8 +116,8 @@ def build_leg(a: City, b: City) -> Dict[str, Any]:
         }
 
     return {
-        "from": a.en,
-        "to": b.en,
+        "from": display_name(a, lang),
+        "to": display_name(b, lang),
         "mode": "flight",
         "duration_min": _round10(distance / FLIGHT_KMH * 60 + AIRPORT_BUFFER_MIN),
         "distance_km": round(distance),
@@ -112,20 +128,17 @@ def build_leg(a: City, b: City) -> Dict[str, Any]:
     }
 
 
-def _fmt(minutes: int) -> str:
-    h, m = divmod(int(minutes), 60)
-    return f"{h}h{m:02d}" if h else f"{m}min"
-
-
 def build_plan(
     city_keys: Sequence[str],
     start_date: str,
     days: int,
     pace: str = "balanced",
+    lang: str = "en",
 ) -> Dict[str, Any]:
+    lang = normalise(lang)
     cities = order_cities(city_keys)
     if not cities:
-        return {"ok": False, "error": "No recognised destination. Try Beijing, Shanghai, Xi'an, Chengdu."}
+        return {"ok": False, "error": t(lang, "no_cities"), "lang": lang}
 
     try:
         start = datetime.date.fromisoformat(start_date)
@@ -138,77 +151,89 @@ def build_plan(
     days = max(len(cities), requested)
 
     alloc = allocate_days(cities, days)
-    legs = [build_leg(cities[i], cities[i + 1]) for i in range(len(cities) - 1)]
-
+    legs = [build_leg(cities[i], cities[i + 1], lang) for i in range(len(cities) - 1)]
     per_day = {"slow": 2, "balanced": 3, "fast": 4}.get(pace, 3)
 
     plan_days: List[Dict[str, Any]] = []
     cursor = start
     for idx, city in enumerate(cities):
+        name = display_name(city, lang)
+        picks_all = highlights_for(city, lang)
         for j in range(alloc[idx]):
             items: List[Dict[str, Any]] = []
-            date_str = cursor.isoformat()
             first_day = j == 0
             if first_day and idx == 0:
                 items.append({
                     "time": "15:00",
-                    "title": f"Arrive in {city.en}",
-                    "location": f"{city.en} · {city.zh}",
-                    "detail": "Check in, get a local SIM or eSIM, set up Alipay. Take it easy.",
+                    "title": t(lang, "arrive_title", city=name),
+                    "location": f"{name} · {city.zh if lang == 'en' else city.en}",
+                    "detail": t(lang, "arrive_detail"),
                     "cost": 0,
                 })
                 items.append({
                     "time": "19:00",
-                    "title": city.highlights[0],
-                    "location": city.en,
-                    "detail": "Easy first evening near your hotel.",
+                    "title": picks_all[0],
+                    "location": name,
+                    "detail": t(lang, "arrive_evening"),
                     "cost": 0,
                 })
             elif first_day:
                 leg = legs[idx - 1]
                 items.append({
                     "time": "08:00",
-                    "title": f"{leg['mode'].title()} to {city.en}",
+                    "title": t(lang, "transfer_title", mode=mode_label(lang, leg["mode"]), city=name),
                     "location": leg["detail"],
-                    "detail": f"About {_fmt(leg['duration_min'])}. Book ahead; bring your passport.",
+                    "detail": t(lang, "transfer_detail", dur=fmt_duration(leg["duration_min"], lang)),
                     "cost": 0,
                 })
                 items.append({
                     "time": "15:00",
-                    "title": f"Check in, then {city.highlights[0]}",
-                    "location": city.en,
-                    "detail": "Half-day pace after the transfer.",
+                    "title": t(lang, "checkin_then", first=picks_all[0]),
+                    "location": name,
+                    "detail": t(lang, "half_day"),
                     "cost": 0,
                 })
             else:
-                picks = city.highlights[: max(1, per_day)]
+                picks = picks_all[: max(1, per_day)]
                 slots = ["09:00", "14:00", "19:00", "20:30"][: len(picks)]
                 for slot, pick in zip(slots, picks):
                     items.append({
                         "time": slot,
                         "title": pick,
-                        "location": city.en,
-                        "detail": f"Day {j + 1} in {city.en}.",
+                        "location": name,
+                        "detail": t(lang, "day_n", n=j + 1, city=name),
                         "cost": 0,
                     })
             plan_days.append({
-                "date": date_str,
-                "city": city.en,
+                "date": cursor.isoformat(),
+                "city": name,
                 "city_zh": city.zh,
+                "city_en": city.en,
                 "items": items,
             })
             cursor += datetime.timedelta(days=1)
 
-    title = f"{days}-day China: " + " · ".join(c.en for c in cities)
+    title = t(lang, "title_prefix", days=days) + t(lang, "title_sep").join(
+        display_name(c, lang) for c in cities
+    )
     return {
         "ok": True,
+        "lang": lang,
         "title": title,
         "start": plan_days[0]["date"] if plan_days else start.isoformat(),
         "end": plan_days[-1]["date"] if plan_days else start.isoformat(),
         "days": plan_days,
         "cities": [
-            {"key": c.key, "en": c.en, "zh": c.zh, "station": c.station,
-             "airport": c.airport, "days": alloc[i], "note": c.note}
+            {
+                "key": c.key,
+                "en": c.en,
+                "zh": c.zh,
+                "name": display_name(c, lang),
+                "station": c.station,
+                "airport": c.airport,
+                "days": alloc[i],
+                "note": c.note_zh if lang == "zh" and c.note_zh else c.note,
+            }
             for i, c in enumerate(cities)
         ],
         "legs": legs,

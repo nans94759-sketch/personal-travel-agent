@@ -3,21 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>China Trip Planner — itinerary for travellers arriving in China</title>
+<title>China Trip Planner</title>
 <style>
   :root{--ink:#1a1a1a;--muted:#6b6b6b;--line:#e2e0da;--accent:#185FA5;--bg:#faf9f6;--card:#fff}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font:15px/1.6 -apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+    font:15px/1.6 -apple-system,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Microsoft YaHei",Arial,sans-serif}
   .wrap{max-width:960px;margin:0 auto;padding:40px 24px 80px}
-  header{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:36px}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:36px;flex-wrap:wrap}
   h1{font-size:26px;margin:0;font-weight:600;letter-spacing:-.02em}
   header p{margin:0;color:var(--muted);font-size:13px}
+  .lang{display:flex;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+  .lang button{border:0;background:#fff;padding:6px 13px;font-size:13px;cursor:pointer;
+    color:var(--muted);font-family:inherit}
+  .lang button[aria-pressed="true"]{background:var(--accent);color:#fff}
   .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px;margin-bottom:20px}
   .label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
   .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;
-    font-size:13.5px;cursor:pointer;color:var(--ink);transition:.12s}
+    font-size:13.5px;cursor:pointer;color:var(--ink);transition:.12s;font-family:inherit}
   .chip:hover{border-color:#b9b6ad}
   .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
   .row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-top:18px}
@@ -51,7 +55,7 @@
   .item .x small{display:block;color:var(--muted);font-size:12.5px}
   .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
   .notice{background:#FAEEDA;border:1px solid #FAC775;border-radius:8px;padding:12px 14px;
-    font-size:13px;color:#633806;margin-bottom:18px}
+    font-size:13px;color:#633806;margin:18px 0 0}
   footer{margin-top:36px;color:var(--muted);font-size:12px;line-height:1.7}
   .hidden{display:none}
 </style>
@@ -59,58 +63,73 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>China Trip Planner</h1>
-    <p>Built for travellers arriving in China · indicative timings · printable</p>
+    <div>
+      <h1 data-i18n="brand">China Trip Planner</h1>
+      <p data-i18n="tagline"></p>
+    </div>
+    <div class="lang" role="group" aria-label="Language">
+      <button id="lang-en" aria-pressed="true">EN</button>
+      <button id="lang-zh" aria-pressed="false">中文</button>
+    </div>
   </header>
 
   <div class="card">
-    <p class="label">1 — Where do you want to go</p>
+    <p class="label" data-i18n="step1"></p>
     <div class="chips" id="chips"></div>
     <div class="row">
-      <label class="field"><span>Add another city</span>
-        <select id="more"><option value="">Choose…</option></select>
+      <label class="field"><span data-i18n="add_city"></span>
+        <select id="more"><option value="" data-i18n="choose"></option></select>
       </label>
     </div>
 
     <div class="row">
-      <label class="field"><span>Arrival date</span><input type="date" id="start"></label>
-      <label class="field"><span>Days on the ground</span>
+      <label class="field"><span data-i18n="arrival_date"></span><input type="date" id="start"></label>
+      <label class="field"><span data-i18n="days_label"></span>
         <select id="days">
           <option>4</option><option>5</option><option>6</option><option selected>7</option>
           <option>8</option><option>10</option><option>12</option><option>14</option>
         </select>
       </label>
-      <label class="field"><span>Pace</span>
+      <label class="field"><span data-i18n="pace"></span>
         <select id="pace">
-          <option value="slow">Slow — 2 stops a day</option>
-          <option value="balanced" selected>Balanced — 3 stops a day</option>
-          <option value="fast">Fast — 4 stops a day</option>
+          <option value="slow" data-i18n="pace_slow"></option>
+          <option value="balanced" selected data-i18n="pace_balanced"></option>
+          <option value="fast" data-i18n="pace_fast"></option>
         </select>
       </label>
-      <button class="primary" id="go" disabled>Build my itinerary</button>
+      <button class="primary" id="go" disabled data-i18n="build"></button>
     </div>
-    <p class="hint" id="hint">Pick at least two cities. The first one is treated as your arrival city.</p>
+    <p class="hint" id="hint"></p>
   </div>
 
   <div id="out" class="hidden"></div>
 
-  <footer>
-    Times and travel durations are indicative and meant for planning. Confirm departure
-    times, seat availability and prices with the booking provider before you travel.
-    Carry your passport on every train. Visa and entry rules are set by the Chinese
-    authorities — check the latest requirements for your nationality.
-  </footer>
+  <footer data-i18n="footer"></footer>
 </div>
 
 <script>
-const state = { selected: [], cities: null, plan: null };
+const state = { lang: "en", selected: [], cities: null, strings: {}, plan: null };
 
 const $ = (id) => document.getElementById(id);
+const t = (key) => state.strings[key] || key;
+const cityName = (c) => (state.lang === "zh" ? c.zh : c.en);
+const cityAlt = (c) => (state.lang === "zh" ? c.en : c.zh);
+
+function applyStrings() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.dataset.i18n;
+    if (state.strings[key]) el.textContent = state.strings[key];
+  });
+  document.documentElement.lang = state.strings.html_lang || state.lang;
+  document.title = t("brand");
+  $("lang-en").setAttribute("aria-pressed", state.lang === "en" ? "true" : "false");
+  $("lang-zh").setAttribute("aria-pressed", state.lang === "zh" ? "true" : "false");
+}
 
 function chip(city) {
   const b = document.createElement("button");
   b.className = "chip";
-  b.textContent = city.en;
+  b.textContent = cityName(city);
   b.dataset.key = city.key;
   b.setAttribute("aria-pressed", state.selected.includes(city.key) ? "true" : "false");
   b.onclick = () => toggle(city.key);
@@ -138,19 +157,28 @@ function renderChips() {
 function syncButton() {
   const ok = state.selected.length >= 2;
   $("go").disabled = !ok;
-  $("hint").textContent = ok
-    ? `Arriving in ${state.cities.all.find((c) => c.key === state.selected[0]).en}. ${state.selected.length} cities selected.`
-    : "Pick at least two cities. The first one is treated as your arrival city.";
+  if (ok) {
+    const first = state.cities.all.find((c) => c.key === state.selected[0]);
+    $("hint").textContent = t("hint_ready")
+      .replace("{city}", cityName(first))
+      .replace("{n}", state.selected.length);
+  } else {
+    $("hint").textContent = t("hint_need_two");
+  }
 }
 
 async function loadCities() {
-  const res = await fetch("/api/inbound/cities");
+  const res = await fetch(`/api/inbound/cities?lang=${state.lang}`);
   state.cities = await res.json();
+  state.strings = state.cities.strings || {};
+  applyStrings();
+
   const more = $("more");
+  more.innerHTML = `<option value="">${t("choose")}</option>`;
   state.cities.all.forEach((c) => {
     const o = document.createElement("option");
     o.value = c.key;
-    o.textContent = `${c.en} · ${c.zh} — ${c.region}`;
+    o.textContent = `${cityName(c)} · ${cityAlt(c)} — ${c.region}`;
     more.appendChild(o);
   });
   more.onchange = () => {
@@ -164,57 +192,62 @@ async function loadCities() {
   syncButton();
 }
 
-const fmt = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}` : `${m}min`);
+function fmt(m) {
+  const h = Math.floor(m / 60), mm = m % 60;
+  if (state.lang === "zh") {
+    if (h && mm) return `${h} 小时 ${mm} 分`;
+    if (h) return `${h} 小时`;
+    return `${mm} 分钟`;
+  }
+  return h ? `${h}h${String(mm).padStart(2, "0")}` : `${mm}min`;
+}
 
 function renderPlan(plan) {
   state.plan = plan;
   const out = $("out");
   if (!plan.ok) {
     out.className = "";
-    out.innerHTML = `<div class="card"><p>${plan.error || "Could not build a plan."}</p></div>`;
+    out.innerHTML = `<div class="card"><p>${plan.error || "—"}</p></div>`;
     return;
   }
   const legs = plan.legs.map((l) => `
     <div class="leg">
-      <div class="m">${l.mode}</div>
-      <div>${l.from} → ${l.to}<small>${l.detail} · ${l.indicative ? "estimated" : "typical"}</small></div>
+      <div class="m">${l.mode === "train" ? (state.lang === "zh" ? "高铁" : "train") : (state.lang === "zh" ? "航班" : "flight")}</div>
+      <div>${l.from} → ${l.to}<small>${l.detail} · ${l.indicative ? t("estimated") : t("typ")}</small></div>
       <div class="d">${fmt(l.duration_min)}</div>
       ${l.booking_url
-        ? `<a class="book" href="${l.booking_url}" target="_blank" rel="nofollow sponsored">Book</a>`
+        ? `<a class="book" href="${l.booking_url}" target="_blank" rel="nofollow sponsored">${t("book")}</a>`
         : `<span class="d">—</span>`}
     </div>`).join("");
 
   const days = plan.days.map((d) => `
     <div class="day">
       <div class="d">${d.date}</div>
-      <h3>${d.city} <small>${d.city_zh}</small></h3>
+      <h3>${d.city} <small>${state.lang === "zh" ? d.city_en : d.city_zh}</small></h3>
       ${d.items.map((i) => `
         <div class="item"><div class="t">${i.time}</div>
         <div class="x">${i.title}<small>${i.detail}</small></div></div>`).join("")}
     </div>`).join("");
 
-  const warn = plan.affiliate_ready ? "" :
-    `<div class="notice">Booking links are not configured yet — Trip.com affiliate credentials are missing.
-     You can still export the itinerary and book directly on Trip.com.</div>`;
+  const warn = plan.affiliate_ready ? "" : `<div class="notice">${t("no_affiliate")}</div>`;
 
   out.className = "";
   out.innerHTML = `
     <div class="card">
       <h2 style="font-size:19px;margin:0 0 14px;font-weight:600">${plan.title}</h2>
       <div class="summary">
-        <div>Dates<b>${plan.start} → ${plan.end}</b></div>
-        <div>Distance<b>${plan.total_distance_km.toLocaleString()} km</b></div>
-        <div>Stops<b>${plan.cities.length} cities</b></div>
-        <div>Pace<b>${plan.pace}</b></div>
+        <div>${t("meta_dates")}<b>${plan.start} → ${plan.end}</b></div>
+        <div>${t("meta_distance")}<b>${plan.total_distance_km.toLocaleString()} km</b></div>
+        <div>${t("meta_stops")}<b>${plan.cities.length}</b></div>
       </div>
       ${warn}
-      <p class="label" style="margin-top:18px">Getting between cities</p>
+      <p class="label" style="margin-top:18px">${t("getting_between")}</p>
       ${legs}
-      <p class="label" style="margin-top:22px">Day by day</p>
+      <p class="label" style="margin-top:22px">${t("day_by_day")}</p>
       ${days}
       <div class="actions">
-        <button class="ghost" id="pdf">Open printable version</button>
-        <button class="ghost" id="ics">Download calendar (.ics)</button>
+        <button class="ghost" id="pdf">${t("open_print")}</button>
+        <button class="ghost" id="ics">${t("download_ics")}</button>
       </div>
     </div>`;
 
@@ -224,6 +257,7 @@ function renderPlan(plan) {
       start: plan.start,
       days: plan.days.length,
       pace: plan.pace,
+      lang: state.lang,
     });
     window.open(`/api/inbound/print?${q}`, "_blank");
   };
@@ -245,9 +279,9 @@ async function downloadIcs(plan) {
   URL.revokeObjectURL(url);
 }
 
-$("go").onclick = async () => {
+async function build() {
   $("go").disabled = true;
-  $("go").textContent = "Building…";
+  $("go").textContent = t("building");
   try {
     const res = await fetch("/api/inbound/plan", {
       method: "POST",
@@ -257,15 +291,28 @@ $("go").onclick = async () => {
         start: $("start").value,
         days: Number($("days").value),
         pace: $("pace").value,
+        lang: state.lang,
       }),
     });
     renderPlan(await res.json());
     $("out").scrollIntoView({ behavior: "smooth", block: "start" });
   } finally {
-    $("go").textContent = "Build my itinerary";
+    $("go").textContent = t("build");
     syncButton();
   }
-};
+}
+
+$("go").onclick = build;
+
+async function setLang(lang) {
+  if (state.lang === lang) return;
+  state.lang = lang;
+  await loadCities();
+  if (state.plan && state.plan.ok) await build();
+}
+
+$("lang-en").onclick = () => setLang("en");
+$("lang-zh").onclick = () => setLang("zh");
 
 const d = new Date();
 d.setDate(d.getDate() + 30);
