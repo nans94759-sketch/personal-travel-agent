@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>China Trip Planner — itinerary for travellers arriving in China</title>
+<style>
+  :root{--ink:#1a1a1a;--muted:#6b6b6b;--line:#e2e0da;--accent:#185FA5;--bg:#faf9f6;--card:#fff}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.6 -apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+  .wrap{max-width:960px;margin:0 auto;padding:40px 24px 80px}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:36px}
+  h1{font-size:26px;margin:0;font-weight:600;letter-spacing:-.02em}
+  header p{margin:0;color:var(--muted);font-size:13px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:24px;margin-bottom:20px}
+  .label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;
+    font-size:13.5px;cursor:pointer;color:var(--ink);transition:.12s}
+  .chip:hover{border-color:#b9b6ad}
+  .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+  .row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-top:18px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field span{font-size:12px;color:var(--muted)}
+  input,select{padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:14px;
+    background:#fff;color:var(--ink);font-family:inherit}
+  button.primary{padding:11px 22px;border:0;border-radius:8px;background:var(--accent);color:#fff;
+    font-size:14.5px;cursor:pointer;font-family:inherit}
+  button.primary:disabled{opacity:.45;cursor:default}
+  .ghost{padding:9px 16px;border:1px solid var(--line);border-radius:8px;background:#fff;
+    font-size:13.5px;cursor:pointer;font-family:inherit;color:var(--ink)}
+  .hint{color:var(--muted);font-size:12.5px;margin:14px 0 0}
+  .summary{display:flex;flex-wrap:wrap;gap:28px;padding:0 0 18px;border-bottom:1px solid var(--line);margin-bottom:6px}
+  .summary div{font-size:12px;color:var(--muted)}
+  .summary b{display:block;font-size:16px;font-weight:500;color:var(--ink);margin-top:3px}
+  .leg{display:grid;grid-template-columns:88px 1fr auto auto;gap:14px;align-items:baseline;
+    padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .leg .m{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
+  .leg small{color:var(--muted);font-size:12.5px;display:block}
+  .leg .d{color:var(--muted);font-size:13px;white-space:nowrap}
+  a.book{font-size:12.5px;color:var(--accent);text-decoration:none;border:1px solid var(--accent);
+    border-radius:6px;padding:5px 11px;white-space:nowrap}
+  .day{padding:14px 0;border-bottom:1px solid var(--line)}
+  .day .d{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .day h3{font-size:15.5px;margin:2px 0 8px;font-weight:500}
+  .day h3 small{color:var(--muted);font-weight:400;font-size:13px}
+  .item{display:grid;grid-template-columns:54px 1fr;gap:12px;padding:4px 0}
+  .item .t{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .item .x{font-size:14px}
+  .item .x small{display:block;color:var(--muted);font-size:12.5px}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+  .notice{background:#FAEEDA;border:1px solid #FAC775;border-radius:8px;padding:12px 14px;
+    font-size:13px;color:#633806;margin-bottom:18px}
+  footer{margin-top:36px;color:var(--muted);font-size:12px;line-height:1.7}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>China Trip Planner</h1>
+    <p>Built for travellers arriving in China · indicative timings · printable</p>
+  </header>
+
+  <div class="card">
+    <p class="label">1 — Where do you want to go</p>
+    <div class="chips" id="chips"></div>
+    <div class="row">
+      <label class="field"><span>Add another city</span>
+        <select id="more"><option value="">Choose…</option></select>
+      </label>
+    </div>
+
+    <div class="row">
+      <label class="field"><span>Arrival date</span><input type="date" id="start"></label>
+      <label class="field"><span>Days on the ground</span>
+        <select id="days">
+          <option>4</option><option>5</option><option>6</option><option selected>7</option>
+          <option>8</option><option>10</option><option>12</option><option>14</option>
+        </select>
+      </label>
+      <label class="field"><span>Pace</span>
+        <select id="pace">
+          <option value="slow">Slow — 2 stops a day</option>
+          <option value="balanced" selected>Balanced — 3 stops a day</option>
+          <option value="fast">Fast — 4 stops a day</option>
+        </select>
+      </label>
+      <button class="primary" id="go" disabled>Build my itinerary</button>
+    </div>
+    <p class="hint" id="hint">Pick at least two cities. The first one is treated as your arrival city.</p>
+  </div>
+
+  <div id="out" class="hidden"></div>
+
+  <footer>
+    Times and travel durations are indicative and meant for planning. Confirm departure
+    times, seat availability and prices with the booking provider before you travel.
+    Carry your passport on every train. Visa and entry rules are set by the Chinese
+    authorities — check the latest requirements for your nationality.
+  </footer>
+</div>
+
+<script>
+const state = { selected: [], cities: null, plan: null };
+
+const $ = (id) => document.getElementById(id);
+
+function chip(city) {
+  const b = document.createElement("button");
+  b.className = "chip";
+  b.textContent = city.en;
+  b.dataset.key = city.key;
+  b.setAttribute("aria-pressed", state.selected.includes(city.key) ? "true" : "false");
+  b.onclick = () => toggle(city.key);
+  return b;
+}
+
+function toggle(key) {
+  const i = state.selected.indexOf(key);
+  if (i >= 0) state.selected.splice(i, 1);
+  else state.selected.push(key);
+  renderChips();
+  syncButton();
+}
+
+function renderChips() {
+  const box = $("chips");
+  box.innerHTML = "";
+  const list = state.selected
+    .map((k) => state.cities.all.find((c) => c.key === k))
+    .filter(Boolean);
+  const pool = [...list, ...state.cities.popular.filter((c) => !state.selected.includes(c.key))];
+  pool.slice(0, 12).forEach((c) => box.appendChild(chip(c)));
+}
+
+function syncButton() {
+  const ok = state.selected.length >= 2;
+  $("go").disabled = !ok;
+  $("hint").textContent = ok
+    ? `Arriving in ${state.cities.all.find((c) => c.key === state.selected[0]).en}. ${state.selected.length} cities selected.`
+    : "Pick at least two cities. The first one is treated as your arrival city.";
+}
+
+async function loadCities() {
+  const res = await fetch("/api/inbound/cities");
+  state.cities = await res.json();
+  const more = $("more");
+  state.cities.all.forEach((c) => {
+    const o = document.createElement("option");
+    o.value = c.key;
+    o.textContent = `${c.en} · ${c.zh} — ${c.region}`;
+    more.appendChild(o);
+  });
+  more.onchange = () => {
+    if (!more.value) return;
+    if (!state.selected.includes(more.value)) state.selected.push(more.value);
+    more.value = "";
+    renderChips();
+    syncButton();
+  };
+  renderChips();
+  syncButton();
+}
+
+const fmt = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, "0")}` : `${m}min`);
+
+function renderPlan(plan) {
+  state.plan = plan;
+  const out = $("out");
+  if (!plan.ok) {
+    out.className = "";
+    out.innerHTML = `<div class="card"><p>${plan.error || "Could not build a plan."}</p></div>`;
+    return;
+  }
+  const legs = plan.legs.map((l) => `
+    <div class="leg">
+      <div class="m">${l.mode}</div>
+      <div>${l.from} → ${l.to}<small>${l.detail} · ${l.indicative ? "estimated" : "typical"}</small></div>
+      <div class="d">${fmt(l.duration_min)}</div>
+      ${l.booking_url
+        ? `<a class="book" href="${l.booking_url}" target="_blank" rel="nofollow sponsored">Book</a>`
+        : `<span class="d">—</span>`}
+    </div>`).join("");
+
+  const days = plan.days.map((d) => `
+    <div class="day">
+      <div class="d">${d.date}</div>
+      <h3>${d.city} <small>${d.city_zh}</small></h3>
+      ${d.items.map((i) => `
+        <div class="item"><div class="t">${i.time}</div>
+        <div class="x">${i.title}<small>${i.detail}</small></div></div>`).join("")}
+    </div>`).join("");
+
+  const warn = plan.affiliate_ready ? "" :
+    `<div class="notice">Booking links are not configured yet — Trip.com affiliate credentials are missing.
+     You can still export the itinerary and book directly on Trip.com.</div>`;
+
+  out.className = "";
+  out.innerHTML = `
+    <div class="card">
+      <h2 style="font-size:19px;margin:0 0 14px;font-weight:600">${plan.title}</h2>
+      <div class="summary">
+        <div>Dates<b>${plan.start} → ${plan.end}</b></div>
+        <div>Distance<b>${plan.total_distance_km.toLocaleString()} km</b></div>
+        <div>Stops<b>${plan.cities.length} cities</b></div>
+        <div>Pace<b>${plan.pace}</b></div>
+      </div>
+      ${warn}
+      <p class="label" style="margin-top:18px">Getting between cities</p>
+      ${legs}
+      <p class="label" style="margin-top:22px">Day by day</p>
+      ${days}
+      <div class="actions">
+        <button class="ghost" id="pdf">Open printable version</button>
+        <button class="ghost" id="ics">Download calendar (.ics)</button>
+      </div>
+    </div>`;
+
+  $("pdf").onclick = () => {
+    const q = new URLSearchParams({
+      cities: state.selected.join(","),
+      start: plan.start,
+      days: plan.days.length,
+      pace: plan.pace,
+    });
+    window.open(`/api/inbound/print?${q}`, "_blank");
+  };
+  $("ics").onclick = () => downloadIcs(plan);
+}
+
+async function downloadIcs(plan) {
+  const res = await fetch("/api/export/ics", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ itinerary: plan }),
+  });
+  const text = await res.text();
+  const url = URL.createObjectURL(new Blob([text], { type: "text/calendar" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "china-itinerary.ics";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+$("go").onclick = async () => {
+  $("go").disabled = true;
+  $("go").textContent = "Building…";
+  try {
+    const res = await fetch("/api/inbound/plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cities: state.selected,
+        start: $("start").value,
+        days: Number($("days").value),
+        pace: $("pace").value,
+      }),
+    });
+    renderPlan(await res.json());
+    $("out").scrollIntoView({ behavior: "smooth", block: "start" });
+  } finally {
+    $("go").textContent = "Build my itinerary";
+    syncButton();
+  }
+};
+
+const d = new Date();
+d.setDate(d.getDate() + 30);
+$("start").value = d.toISOString().slice(0, 10);
+loadCities();
+</script>
+</body>
+</html>

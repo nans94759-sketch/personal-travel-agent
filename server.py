@@ -50,6 +50,86 @@ async def handle_index(request: web.Request) -> web.FileResponse:
     return web.FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
+# ---------------------------------------------------------------------------
+# Inbound product (English, USD). Pure computation over static city data —
+# no scraper is touched, so these routes stay available in commercial mode.
+# ---------------------------------------------------------------------------
+
+
+def _inbound_request(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "cities": payload.get("cities") or [],
+        "start": (payload.get("start") or "").strip(),
+        "days": int(payload.get("days") or 7),
+        "pace": (payload.get("pace") or "balanced").strip(),
+    }
+
+
+def _inbound_plan(payload: Dict[str, Any]) -> Dict[str, Any]:
+    from inbound import attach_links, build_plan
+
+    req = _inbound_request(payload)
+    return attach_links(build_plan(req["cities"], req["start"], req["days"], req["pace"]))
+
+
+async def handle_inbound_page(request: web.Request) -> web.FileResponse:
+    return web.FileResponse(os.path.join(STATIC_DIR, "inbound.html"))
+
+
+async def handle_inbound_cities(request: web.Request) -> web.Response:
+    from inbound import CITIES, popular
+
+    def _row(c: Any) -> Dict[str, Any]:
+        return {
+            "key": c.key,
+            "en": c.en,
+            "zh": c.zh,
+            "region": c.region,
+            "days": c.days,
+            "station": c.station,
+            "highlights": c.highlights,
+            "note": c.note,
+        }
+
+    return web.json_response(
+        {
+            "popular": [_row(c) for c in popular(8)],
+            "all": [_row(c) for c in sorted(CITIES.values(), key=lambda x: x.en)],
+            "affiliate_ready": bool(os.environ.get("TRIP_COM_ALLIANCEID")),
+        }
+    )
+
+
+async def handle_inbound_plan(request: web.Request) -> web.Response:
+    try:
+        body: Dict[str, Any] = await request.json()
+    except Exception:
+        body = {}
+    loop = asyncio.get_running_loop()
+    plan = await loop.run_in_executor(None, _inbound_plan, body)
+    return web.json_response(plan)
+
+
+async def handle_inbound_print(request: web.Request) -> web.Response:
+    """Printable itinerary. Query params so it can open in a new tab."""
+    from inbound import render
+
+    payload = {
+        "cities": [c for c in (request.query.get("cities") or "").split(",") if c],
+        "start": request.query.get("start") or "",
+        "days": request.query.get("days") or 7,
+        "pace": request.query.get("pace") or "balanced",
+    }
+    loop = asyncio.get_running_loop()
+    plan = await loop.run_in_executor(None, _inbound_plan, payload)
+    return web.Response(
+        text=render(plan),
+        content_type="text/html",
+        charset="utf-8",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 async def handle_chat_tools(request: web.Request) -> web.Response:
     """
     Step 1 of a chat turn:
@@ -671,6 +751,10 @@ async def compliance_middleware(
 def create_app() -> web.Application:
     app = web.Application(middlewares=[compliance_middleware])
     app.router.add_get("/", handle_index)
+    app.router.add_get("/inbound", handle_inbound_page)
+    app.router.add_get("/api/inbound/cities", handle_inbound_cities)
+    app.router.add_post("/api/inbound/plan", handle_inbound_plan)
+    app.router.add_get("/api/inbound/print", handle_inbound_print)
     app.router.add_get("/api/fx", handle_fx)
     app.router.add_post("/api/chat/tools", handle_chat_tools)
     app.router.add_post("/api/chat/reply", handle_chat_reply)
