@@ -16,6 +16,10 @@
 
 ---
 
+> **Branch notice** — `main` is the personal-use tool (scrapes 12306 / Ctrip / Tongcheng, Chinese UI, not for public deployment). `commercial` is the compliant, paid product line (whitelisted official & affiliate APIs only, English-first, USD billing). See [BRANCHES.md](BRANCHES.md) before you open a PR.
+
+---
+
 ## ✨ Key Capabilities
 
 - **🚄 Live Train & High-Speed Rail** — Real-time seat availability, fares across all cabin classes, and station-by-station stopover timetables across 3,300+ Chinese stations (including county-level towns).
