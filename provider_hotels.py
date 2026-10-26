@@ -19,6 +19,8 @@ import subprocess
 import urllib.parse
 from typing import Any, Dict, List, Optional
 
+from compliance import guard
+
 try:
     from opencc import OpenCC
     _cc = OpenCC("t2s")
@@ -148,6 +150,7 @@ CTRIP_CITY_ID_MAP: Dict[str, int] = {
 
 class HotelScraperClient:
     def resolve_city_id(self, city_name: str) -> Optional[int]:
+        guard("ctrip.h5api_globalsearch")
         if not city_name:
             return None
         clean = re.sub(r"(市|县|区|站|地区|特别行政区)$", "", city_name.strip())
@@ -211,6 +214,7 @@ class HotelScraperClient:
         If `area_keyword` is provided (e.g. "外滩", "静安寺", "西湖"), automatically matches
         the city's business zone ID or filters matching hotels.
         """
+        guard("ctrip.hotel_ssr")
         city_id = self.resolve_city_id(city_name)
         if not city_id:
             return {

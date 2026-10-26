@@ -23,6 +23,8 @@ import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
+from compliance import Mode, current_mode, guard
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CACHE_DIR = os.path.join(BASE_DIR, ".cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
@@ -105,6 +107,15 @@ class Train12306Client:
                     pass
 
         raw_js = ""
+        if current_mode() is Mode.COMMERCIAL:
+            # 商业模式禁止实时抓取站点表，只允许使用内置静态数据。
+            if not self.stations_by_name:
+                print(
+                    "[12306] 商业模式下未找到内置站点表 data/12306_stations.json，"
+                    "车站解析将不可用。"
+                )
+            return
+
         try:
             req = urllib.request.Request(
                 "https://kyfw.12306.cn/otn/resources/js/framework/station_name.js",
@@ -178,6 +189,7 @@ class Train12306Client:
         return None
 
     def _ensure_session(self) -> None:
+        guard("12306.left_ticket")
         if time.time() - self.last_init_ts < 600:
             return
         try:
@@ -285,6 +297,7 @@ class Train12306Client:
         only_high_speed: bool = False,
     ) -> Dict[str, Any]:
         """Query live 12306 tickets between from_city and to_city on train_date (YYYY-MM-DD)."""
+        guard("12306.left_ticket")
         self._ensure_session()
         from_st = self.resolve_station(from_city)
         to_st = self.resolve_station(to_city)
@@ -451,6 +464,7 @@ class Train12306Client:
         self, train_no: str, from_code: str, to_code: str, train_date: str
     ) -> List[Dict[str, Any]]:
         """Query stopover timetable for a specific train via czxx/queryByTrainNo."""
+        guard("12306.left_ticket")
         url = (
             f"https://kyfw.12306.cn/otn/czxx/queryByTrainNo"
             f"?train_no={train_no}"

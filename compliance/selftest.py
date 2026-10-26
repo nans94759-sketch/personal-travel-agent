@@ -26,6 +26,7 @@ from .source_policy import (
     check_registry,
     guard,
     report,
+    source_allowed,
 )
 
 CHECKS: List[Tuple[str, Callable[[], None]]] = []
@@ -83,6 +84,14 @@ def _unknown_source() -> None:
         lambda: guard("some.random.scraper", mode=Mode.COMMERCIAL),
         "guard(未登记源)",
     )
+
+
+@check("source_allowed 不抛异常且判断正确")
+def _source_allowed() -> None:
+    assert source_allowed("travelpayouts.autocomplete", mode=Mode.COMMERCIAL)
+    assert not source_allowed("ly.flight_ssr", mode=Mode.COMMERCIAL)
+    assert source_allowed("ly.flight_ssr", mode=Mode.PERSONAL)
+    assert not source_allowed("nonexistent.source", mode=Mode.PERSONAL)
 
 
 @check("联盟凭据缺失时 fail-closed")

@@ -25,6 +25,7 @@ from .source_policy import (
     current_mode,
     guard,
     report,
+    source_allowed,
 )
 
 __all__ = [
@@ -45,4 +46,5 @@ __all__ = [
     "missing_env",
     "partner_configured",
     "report",
+    "source_allowed",
 ]

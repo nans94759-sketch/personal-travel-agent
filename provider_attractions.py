@@ -17,6 +17,8 @@ import subprocess
 import urllib.parse
 from typing import Any, Dict, List, Optional, Tuple
 
+from compliance import guard
+
 try:
     from opencc import OpenCC
     _cc = OpenCC("t2s")
@@ -133,6 +135,7 @@ class GlobalAttractionClient:
         """
         Resolve a city or attraction keyword into (district_id, resolved_city_name, direct_poi_hits).
         """
+        guard("ctrip.h5api_globalsearch")
         if not query:
             return None, "", []
         clean = re.sub(
@@ -202,6 +205,7 @@ class GlobalAttractionClient:
         """
         Query real-time global attractions & ticket prices for a city or specific sight keyword.
         """
+        guard("ctrip.sight_ssr")
         search_q = city_or_keyword
         if ticket_keyword and ticket_keyword not in city_or_keyword:
             search_q = f"{city_or_keyword} {ticket_keyword}"

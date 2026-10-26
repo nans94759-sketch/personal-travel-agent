@@ -16,6 +16,7 @@ from typing import Any, Dict, List
 
 from aiohttp import web
 
+from compliance import ComplianceViolation
 from planner_agent import (
     ai_route_tools,
     build_comparison_matrix,
@@ -648,8 +649,27 @@ async def handle_fx(request: web.Request) -> web.Response:
     )
 
 
+@web.middleware
+async def compliance_middleware(
+    request: web.Request, handler: Any
+) -> web.Response:
+    """商业模式下被拦截的数据源统一返回 503，而不是伪装成"没有数据"。"""
+    try:
+        return await handler(request)
+    except ComplianceViolation as exc:
+        return web.json_response(
+            {
+                "ok": False,
+                "error": "compliance_blocked",
+                "detail": str(exc),
+                "hint": "该数据源未在商业模式白名单内，见 compliance/source_policy.py",
+            },
+            status=503,
+        )
+
+
 def create_app() -> web.Application:
-    app = web.Application()
+    app = web.Application(middlewares=[compliance_middleware])
     app.router.add_get("/", handle_index)
     app.router.add_get("/api/fx", handle_fx)
     app.router.add_post("/api/chat/tools", handle_chat_tools)

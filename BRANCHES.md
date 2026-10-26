@@ -57,6 +57,24 @@ TRAVELPAYOUTS_MARKER=xxx           # 可选
 
 ## 当前状态
 
-- `commercial` 分支已完成：合规闸门、联盟链接构造、自测（8 项全过）、合规与定价文档。
-- **未完成**：provider 层尚未接入闸门；12306 / 携程 / 同程的抓取代码仍在这条分支上（跑起来会违规），需按 `docs/COMPLIANCE.md` 逐条替换后再对外部署。
-- 两个分支共同的阻塞项：`provider_map.py` 未提交、`static/vendor/leaflet.*` 缺失，服务目前无法启动。
+**已完成**
+
+- 合规闸门（`compliance/source_policy.py`）：18 个数据源登记，商业模式拦截 7 个未授权抓取源。
+- 联盟链接构造（`compliance/affiliate.py`）：fail-closed，无凭据不给链接。
+- 自测 9 项全过：`python -m compliance.selftest`
+- **闸门已接入 provider**：`provider_12306` / `provider_hotels` / `provider_attractions` / `provider_flights` 的请求入口均已埋 `guard()`；`server.py` 加了中间件，违规统一返回 `503 compliance_blocked`，不会伪装成「没有数据」。
+- 站点表在商业模式下不再实时抓取，只用内置 `data/12306_stations.json`（实测 3,404 个车站，个人/商业两模式一致）。
+
+**实测结果**
+
+| 模式 | 首页 | `/api/transfers` |
+| :-- | :-- | :-- |
+| `personal` | 200 | 200，返回真实中转方案 |
+| `commercial` | 200 | **503 `compliance_blocked`**，附替代方案提示 |
+
+**未完成（商业上线前必须做）**
+
+1. 用 Trip.com / Booking / Agoda / Klook / Travelpayouts 联盟接口替换 7 个抓取源，替换后 `503` 才会变成正常数据。
+2. 英文界面与 i18n（当前 `lang="zh-CN"`）。
+3. 付费墙、四个合规页面、Creem 收款。
+

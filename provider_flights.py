@@ -22,6 +22,7 @@ import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional
 
+from compliance import guard, source_allowed
 from provider_12306 import Train12306Client
 from provider_global_transit import CITY_COUNTRY_CURRENCY_MAP
 
@@ -168,7 +169,8 @@ class FlightScraperClient:
             candidates.append(prefecture_city)
 
         # 1. Live global & domestic lookup via Tongcheng miflightapi searchCity
-        for cand in candidates:
+        #    商业模式下跳过该抓取源，直接走下面的 Travelpayouts 白名单兜底。
+        for cand in (candidates if source_allowed("ly.flight_ssr") else []):
             try:
                 u = (
                     "https://www.ly.com/miflightapi/json/touch/searchCity.html"
@@ -249,6 +251,7 @@ class FlightScraperClient:
         Automatically routes domestic routes to Tongcheng SSR and international routes to
         Tongcheng Global International Flight Price & Tax Calendar Engine.
         """
+        guard("ly.flight_ssr")
         dep_info = self.resolve_city_code(from_city)
         arr_info = self.resolve_city_code(to_city)
         if not dep_info or not arr_info:
@@ -331,6 +334,7 @@ class FlightScraperClient:
         Query global / cross-border real-time bare fares & tax-inclusive flight prices
         via Tongcheng Global Flight API (`miflightapi/ts/calendar`).
         """
+        guard("ly.flight_ssr")
         dep_code = dep_info["code"]
         arr_code = arr_info["code"]
         dep_name = dep_info["city"]

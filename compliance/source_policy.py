@@ -213,6 +213,18 @@ def blocked_in_commercial() -> List[SourcePolicy]:
     return [p for p in SOURCES.values() if not p.commercial_ok]
 
 
+def source_allowed(source_id: str, mode: Optional[Mode] = None) -> bool:
+    """不抛异常地判断数据源在当前模式下是否可用。
+
+    适合「有白名单兜底方案」的场景：商业模式下跳过抓取，直接走允许的路径。
+    """
+    try:
+        guard(source_id, mode=mode)
+    except (ComplianceViolation, UnknownSource):
+        return False
+    return True
+
+
 def check_registry() -> List[str]:
     """登记表自洽性检查。返回问题列表，空列表表示通过。"""
     problems: List[str] = []
