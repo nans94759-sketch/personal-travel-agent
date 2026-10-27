@@ -5,7 +5,7 @@ static city data; booking links only appear when affiliate credentials exist.
 """
 
 from .data import CITIES, City, display_name, get, highlights_for, popular, resolve
-from .i18n import DEFAULT_LANG, LANGS, mode_label, normalise, t, ui_strings
+from .i18n import DEFAULT_LANG, LANGS, mode_label, normalise, t, ui_strings, weekday_name
 from .links import attach_links, flight_link, hotel_link, train_link
 from .planner import build_plan, fmt_duration
 from .render import render

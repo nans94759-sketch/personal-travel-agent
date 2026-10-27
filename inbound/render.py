@@ -81,6 +81,8 @@ def render(plan: Dict[str, Any], lang: Optional[str] = None) -> str:
         f"<div>{_e(t(lang, 'meta_dates'))}<b>{_e(plan['start'])} → {_e(plan['end'])}</b></div>",
         f"<div>{_e(t(lang, 'meta_distance'))}<b>{plan.get('total_distance_km', 0):,} km</b></div>",
         f"<div>{_e(t(lang, 'meta_stops'))}<b>{len(plan.get('cities', []))}</b></div>",
+        f"<div>{_e(t(lang, 'total_travel'))}<b>"
+        f"{_e(fmt_duration(plan.get('total_travel_minutes', 0), lang))}</b></div>",
         "</div>",
     ]
 
@@ -100,17 +102,21 @@ def render(plan: Dict[str, Any], lang: Optional[str] = None) -> str:
     parts.append(f"<h2>{_e(t(lang, 'day_by_day'))}</h2>")
     for day in plan.get("days", []):
         parts.append("<div class='day'>")
-        parts.append(f"<div class='d'>{_e(day['date'])}</div>")
+        parts.append(
+            f"<div class='d'>{_e(day['date'])} {_e(day.get('weekday', ''))}</div>"
+        )
         secondary = day.get("city_en") if lang == "zh" else day.get("city_zh")
         parts.append(
             f"<h3>{_e(day['city'])} "
             f"<small style='color:#6b6b6b'>{_e(secondary)}</small></h3>"
         )
         for item in day.get("items", []):
+            detail = item.get("detail") or ""
             parts.append(
                 "<div class='item'>"
                 f"<div class='t'>{_e(item['time'])}</div>"
-                f"<div class='x'>{_e(item['title'])}<small>{_e(item['detail'])}</small></div>"
+                f"<div class='x'>{_e(item['title'])}"
+                f"<small>{_e(detail)}</small></div>"
                 "</div>"
             )
         parts.append("</div>")

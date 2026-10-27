@@ -35,6 +35,10 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "open_print": "Open printable version",
         "download_ics": "Download calendar (.ics)",
         "save_pdf": "Save as PDF",
+        "hotels": "Hotels",
+        "tag_no_signup": "No sign-up",
+        "tag_printable": "Printable & .ics",
+        "tag_indicative": "Indicative timings",
         "no_affiliate": "Booking links are not configured yet — Trip.com affiliate credentials are missing. You can still export the itinerary and book directly on Trip.com.",
         "typ": "typical",
         "estimated": "estimated",
@@ -51,6 +55,15 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "checkin_then": "Check in, then {first}",
         "half_day": "Half-day pace after the transfer.",
         "day_n": "Day {n} in {city}.",
+        "free_evening": "Free evening",
+        "free_evening_detail": "Dinner and a walk near your hotel.",
+        "leisure": "At leisure",
+        "leisure_detail": "No fixed plan — wander the neighbourhood or rest.",
+        "total_travel": "Travel time",
+        "hero_lead": "Pick your cities and get a day-by-day plan you can print or drop into your calendar. No sign-up.",
+        "arrival_tag": "Arrival",
+        "adjust": "Adjust conditions",
+        "your_plan": "Your itinerary",
         "title_prefix": "{days}-day China: ",
         "title_sep": " · ",
         "footer": "Times and travel durations are indicative and meant for planning. Confirm departure times, seat availability and prices with the booking provider before you travel. Carry your passport on every train. Visa and entry rules are set by the Chinese authorities — check the latest requirements for your nationality.",
@@ -82,6 +95,10 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "open_print": "打开可打印版本",
         "download_ics": "下载日历（.ics）",
         "save_pdf": "存为 PDF",
+        "hotels": "订酒店",
+        "tag_no_signup": "免注册",
+        "tag_printable": "可打印 / 可导入日历",
+        "tag_indicative": "时间为参考值",
         "no_affiliate": "预订链接尚未配置 —— 缺少 Trip.com 联盟凭据。你仍可导出行程，直接去 Trip.com 下单。",
         "typ": "代表性",
         "estimated": "估算",
@@ -98,6 +115,15 @@ STRINGS: Dict[str, Dict[str, str]] = {
         "checkin_then": "入住后去{first}",
         "half_day": "转场后按半天节奏安排。",
         "day_n": "在{city}的第 {n} 天。",
+        "free_evening": "自由活动",
+        "free_evening_detail": "在酒店附近吃晚饭、散步。",
+        "leisure": "自由安排",
+        "leisure_detail": "不排固定行程，随意走走或休息。",
+        "total_travel": "在途时间",
+        "hero_lead": "选好城市，立刻得到逐日行程，可打印，也可加进手机日历。无需注册。",
+        "arrival_tag": "抵达",
+        "adjust": "调整条件",
+        "your_plan": "你的行程",
         "title_prefix": "{days} 天中国行：",
         "title_sep": " · ",
         "footer": "所有时间与时长为规划参考，出发前请向预订渠道确认班次、余票与价格。乘坐火车须随身携带护照。签证与入境政策由中国主管部门规定，请以你所属国籍的最新要求为准。",
@@ -112,6 +138,19 @@ MODE_LABEL = {
     "en": {"train": "Train", "flight": "Flight"},
     "zh": {"train": "高铁", "flight": "航班"},
 }
+
+WEEKDAYS = {
+    "en": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "zh": ["周一", "周二", "周三", "周四", "周五", "周六", "周日"],
+}
+
+
+def weekday_name(lang: str, day: Any) -> str:
+    """Short localised weekday for a datetime.date."""
+    try:
+        return WEEKDAYS[normalise(lang)][day.weekday()]
+    except (AttributeError, IndexError, KeyError):
+        return ""
 
 
 def normalise(lang: str) -> str:

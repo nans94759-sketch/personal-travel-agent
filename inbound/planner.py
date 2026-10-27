@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Sequence
 
 from . import corridors
 from .data import City, display_name, get, highlights_for
-from .i18n import mode_label, normalise, t
+from .i18n import mode_label, normalise, t, weekday_name
 
 RAIL_MAX_MINUTES = 330
 RAIL_KMH = 250.0
@@ -158,11 +158,15 @@ def build_plan(
     cursor = start
     for idx, city in enumerate(cities):
         name = display_name(city, lang)
-        picks_all = highlights_for(city, lang)
+        queue = list(highlights_for(city, lang))
+        # 不准重复：把该城的亮点摊到它的天数里，剩下的时段给自由活动
+        per_slot = max(1, min(per_day, round(len(queue) / max(1, alloc[idx])) or 1))
+
         for j in range(alloc[idx]):
             items: List[Dict[str, Any]] = []
             first_day = j == 0
             if first_day and idx == 0:
+                evening = queue.pop(0) if queue else None
                 items.append({
                     "time": "15:00",
                     "title": t(lang, "arrive_title", city=name),
@@ -170,13 +174,14 @@ def build_plan(
                     "detail": t(lang, "arrive_detail"),
                     "cost": 0,
                 })
-                items.append({
-                    "time": "19:00",
-                    "title": picks_all[0],
-                    "location": name,
-                    "detail": t(lang, "arrive_evening"),
-                    "cost": 0,
-                })
+                if evening:
+                    items.append({
+                        "time": "19:00",
+                        "title": evening,
+                        "location": name,
+                        "detail": t(lang, "arrive_evening"),
+                        "cost": 0,
+                    })
             elif first_day:
                 leg = legs[idx - 1]
                 items.append({
@@ -186,26 +191,53 @@ def build_plan(
                     "detail": t(lang, "transfer_detail", dur=fmt_duration(leg["duration_min"], lang)),
                     "cost": 0,
                 })
-                items.append({
-                    "time": "15:00",
-                    "title": t(lang, "checkin_then", first=picks_all[0]),
-                    "location": name,
-                    "detail": t(lang, "half_day"),
-                    "cost": 0,
-                })
+                picks = [queue.pop(0) for _ in range(min(per_slot, len(queue)))]
+                if picks:
+                    items.append({
+                        "time": "15:00",
+                        "title": t(lang, "checkin_then", first=picks[0]),
+                        "location": name,
+                        "detail": t(lang, "half_day"),
+                        "cost": 0,
+                    })
+                    for slot, pick in zip(["17:30"], picks[1:]):
+                        items.append({
+                            "time": slot,
+                            "title": pick,
+                            "location": name,
+                            "detail": t(lang, "day_n", n=j + 1, city=name),
+                            "cost": 0,
+                        })
             else:
-                picks = picks_all[: max(1, per_day)]
-                slots = ["09:00", "14:00", "19:00", "20:30"][: len(picks)]
-                for slot, pick in zip(slots, picks):
+                picks = [queue.pop(0) for _ in range(min(per_slot, len(queue)))]
+                for slot, pick in zip(["09:00", "14:00", "17:30"], picks):
                     items.append({
                         "time": slot,
                         "title": pick,
                         "location": name,
-                        "detail": t(lang, "day_n", n=j + 1, city=name),
+                        "detail": "",
                         "cost": 0,
                     })
+                if len(picks) < 2:
+                    items.append({
+                        "time": "14:00",
+                        "title": t(lang, "leisure"),
+                        "location": name,
+                        "detail": t(lang, "leisure_detail"),
+                        "cost": 0,
+                    })
+                items.append({
+                    "time": "19:30",
+                    "title": t(lang, "free_evening"),
+                    "location": name,
+                    "detail": t(lang, "free_evening_detail"),
+                    "cost": 0,
+                })
+
+            d = cursor
             plan_days.append({
-                "date": cursor.isoformat(),
+                "date": d.isoformat(),
+                "weekday": weekday_name(lang, d),
                 "city": name,
                 "city_zh": city.zh,
                 "city_en": city.en,
@@ -238,5 +270,6 @@ def build_plan(
         ],
         "legs": legs,
         "total_distance_km": sum(leg["distance_km"] for leg in legs),
+        "total_travel_minutes": sum(leg["duration_min"] for leg in legs),
         "pace": pace,
     }
