@@ -18,6 +18,7 @@ import json
 import os
 import re
 import ssl
+import threading
 import time
 import urllib.parse
 import urllib.request
@@ -71,6 +72,7 @@ NATIONAL_HUBS = [
 
 class Train12306Client:
     def __init__(self) -> None:
+        self._lock = threading.Lock()
         self.ssl_ctx = ssl._create_unverified_context()
         self.cj = http.cookiejar.CookieJar()
         self.opener = urllib.request.build_opener(
@@ -140,7 +142,8 @@ class Train12306Client:
                         self.city_to_main_station[city] = code
 
             try:
-                with open(STATION_CACHE_FILE, "w", encoding="utf-8") as f:
+                tmp_file = f"{STATION_CACHE_FILE}.{os.getpid()}.tmp"
+                with open(tmp_file, "w", encoding="utf-8") as f:
                     json.dump(
                         {
                             "by_name": self.stations_by_name,
@@ -150,6 +153,7 @@ class Train12306Client:
                         f,
                         ensure_ascii=False,
                     )
+                os.replace(tmp_file, STATION_CACHE_FILE)
             except Exception:
                 pass
 
@@ -180,19 +184,22 @@ class Train12306Client:
     def _ensure_session(self) -> None:
         if time.time() - self.last_init_ts < 600:
             return
-        try:
-            req = urllib.request.Request(
-                "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc",
-                headers={"User-Agent": USER_AGENT},
-            )
-            with self.opener.open(req, timeout=8) as resp:
-                html = resp.read().decode("utf-8", errors="ignore")
-                m = re.search(r"var\s+CLeftTicketUrl\s*=\s*['\"]([^'\"]+)['\"]", html)
-                if m:
-                    self.query_url_path = m.group(1)
-                self.last_init_ts = time.time()
-        except Exception:
-            self.query_url_path = "leftTicket/queryG"
+        with self._lock:
+            if time.time() - self.last_init_ts < 600:
+                return
+            try:
+                req = urllib.request.Request(
+                    "https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc",
+                    headers={"User-Agent": USER_AGENT},
+                )
+                with self.opener.open(req, timeout=8) as resp:
+                    html = resp.read().decode("utf-8", errors="ignore")
+                    m = re.search(r"var\s+CLeftTicketUrl\s*=\s*['\"]([^'\"]+)['\"]", html)
+                    if m:
+                        self.query_url_path = m.group(1)
+                    self.last_init_ts = time.time()
+            except Exception:
+                self.query_url_path = "leftTicket/queryG"
 
     @staticmethod
     def decode_field39_prices(

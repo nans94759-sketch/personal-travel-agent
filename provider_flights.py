@@ -292,11 +292,17 @@ class FlightScraperClient:
 
             js_expr = m.group(1)
             node_script = (
-                f"const nuxt = {js_expr}; "
-                "console.log(JSON.stringify((nuxt.state && nuxt.state.book1 && nuxt.state.book1.flightLists) || []));"
+                "const fs = require('fs'), vm = require('vm');"
+                "const code = fs.readFileSync(0, 'utf8');"
+                "const ctx = Object.create(null); ctx.window = ctx;"
+                "const nuxt = vm.runInNewContext('(' + code + ')', ctx, { timeout: 1500 });"
+                "console.log(JSON.stringify((nuxt && nuxt.state && nuxt.state.book1 && nuxt.state.book1.flightLists) || []));"
             )
             raw_out = subprocess.check_output(
-                ["node", "-e", node_script], timeout=6
+                ["node", "-e", node_script],
+                input=js_expr.encode("utf-8"),
+                timeout=6,
+                stderr=subprocess.DEVNULL,
             ).decode("utf-8", errors="ignore")
             raw_flights = json.loads(raw_out)
 

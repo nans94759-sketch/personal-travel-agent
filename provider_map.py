@@ -23,6 +23,7 @@ import math
 import os
 import re
 import subprocess
+import threading
 import urllib.parse
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -348,6 +349,7 @@ KNOWN_COORDS_WGS84: Dict[str, Tuple[float, float]] = {
 
 class SmartRouteMapEngine:
     def __init__(self) -> None:
+        self._cache_lock = threading.Lock()
         self._mem_cache: Dict[str, Tuple[float, float]] = dict(KNOWN_COORDS_WGS84)
         self._load_disk_cache()
 
@@ -364,17 +366,20 @@ class SmartRouteMapEngine:
             pass
 
     def _save_disk_cache(self) -> None:
-        try:
-            os.makedirs(CACHE_DIR, exist_ok=True)
-            serializable = {
-                k: [round(v[0], 6), round(v[1], 6)]
-                for k, v in self._mem_cache.items()
-                if k not in KNOWN_COORDS_WGS84
-            }
-            with open(GEOCODE_CACHE_FILE, "w", encoding="utf-8") as f:
-                json.dump(serializable, f, ensure_ascii=False, indent=2)
-        except Exception:
-            pass
+        with self._cache_lock:
+            try:
+                os.makedirs(CACHE_DIR, exist_ok=True)
+                serializable = {
+                    k: [round(v[0], 6), round(v[1], 6)]
+                    for k, v in list(self._mem_cache.items())
+                    if k not in KNOWN_COORDS_WGS84
+                }
+                tmp_file = f"{GEOCODE_CACHE_FILE}.{threading.get_ident()}.tmp"
+                with open(tmp_file, "w", encoding="utf-8") as f:
+                    json.dump(serializable, f, ensure_ascii=False, indent=2)
+                os.replace(tmp_file, GEOCODE_CACHE_FILE)
+            except Exception:
+                pass
 
     def resolve_point(
         self, query: str, city_hint: str = "", allow_network: bool = True

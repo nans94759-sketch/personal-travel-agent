@@ -287,22 +287,22 @@ class HotelScraperClient:
 
     @staticmethod
     def _fetch_ssr_full_str(url: str) -> str:
-        import socket
+        import os
         import time
 
-        has_proxy = False
-        try:
-            with socket.create_connection(("127.0.0.1", 7897), timeout=0.05):
-                has_proxy = True
-        except Exception:
-            has_proxy = False
+        env_proxy = (
+            os.environ.get("HTTPS_PROXY")
+            or os.environ.get("HTTP_PROXY")
+            or os.environ.get("ALL_PROXY")
+            or ""
+        ).strip()
 
         proxy_modes = (
             [
-                ["-x", "http://127.0.0.1:7897", "--tlsv1.2", "--tls-max", "1.2", "--http1.1"],
+                ["-x", env_proxy, "--tlsv1.2", "--tls-max", "1.2", "--http1.1"],
                 ["--tlsv1.2", "--tls-max", "1.2", "--http1.1"],
             ]
-            if has_proxy
+            if env_proxy
             else [
                 ["--tlsv1.2", "--tls-max", "1.2", "--http1.1"],
                 ["--tlsv1.2", "--tls-max", "1.2", "--http1.1"],

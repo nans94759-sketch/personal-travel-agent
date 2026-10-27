@@ -424,6 +424,7 @@ class GlobalTransitClient:
         """
         Fetch live 160+ currency exchange rates from CNY via open.er-api.com (cached for 3600s).
         """
+        import os as _os
         import time as _time
         now_ts = _time.time()
         if not force_refresh and (now_ts - float(_FX_CACHE.get("ts") or 0)) < 3600 and _FX_CACHE.get("updated_utc"):
@@ -434,7 +435,18 @@ class GlobalTransitClient:
                 "updated_utc": _FX_CACHE["updated_utc"],
             }
 
-        for extra in (["-x", "http://127.0.0.1:7897"], ["--tlsv1.2", "--tls-max", "1.2", "--http1.1"]):
+        env_proxy = (
+            _os.environ.get("HTTPS_PROXY")
+            or _os.environ.get("HTTP_PROXY")
+            or _os.environ.get("ALL_PROXY")
+            or ""
+        ).strip()
+        attempt_flags = (
+            [["-x", env_proxy], ["--tlsv1.2", "--tls-max", "1.2", "--http1.1"]]
+            if env_proxy
+            else [["--tlsv1.2", "--tls-max", "1.2", "--http1.1"]]
+        )
+        for extra in attempt_flags:
             try:
                 out = subprocess.check_output(
                     [
