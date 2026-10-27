@@ -1973,6 +1973,26 @@
       if (window.lucide) window.lucide.createIcons();
     }
 
+    function escapeHtml(str) {
+      return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function escapeJsStr(str) {
+      return String(str == null ? '' : str)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '&quot;')
+        .replace(/\r/g, '\\r')
+        .replace(/\n/g, '\\n')
+        .replace(/</g, '\\x3c')
+        .replace(/>/g, '\\x3e');
+    }
+
     function getEffectiveRate(code) {
       if (code === 'CNY') return 1;
       if (customRates[code] && customRates[code] > 0) return customRates[code];
@@ -3430,29 +3450,29 @@
       const intentMaxPrice = intent && intent.max_price;
 
       const rows = list.slice(0, 6).map(h => {
-        const starText = h.star ? `${h.star}星/钻` : '精选';
-        const scoreBadge = h.score ? `${h.score}分 ${h.score_desc || ''}` : '高分';
+        const starText = h.star ? `${escapeHtml(h.star)}星/钻` : '精选';
+        const scoreBadge = h.score ? `${escapeHtml(h.score)}分 ${escapeHtml(h.score_desc || '')}` : '高分';
         const locText = [h.zone, h.position_desc].filter(Boolean).join(' · ') || h.address || '';
-        const safeName = (h.name || '').replace(/'/g, "\\'");
+        const safeName = escapeJsStr(h.name || '');
         const focusAttr = (h.lat && h.lon)
-          ? `onclick="focusPlaceOnTurnMap(${turnId}, '${safeName}', ${h.lat}, ${h.lon}, 'hotel', ${h.price || 0})" style="cursor:pointer;" title="点击在地图上定位该酒店"`
+          ? `onclick="focusPlaceOnTurnMap(${turnId}, '${safeName}', ${Number(h.lat) || 0}, ${Number(h.lon) || 0}, 'hotel', ${Number(h.price) || 0})" style="cursor:pointer;" title="点击在地图上定位该酒店"`
           : '';
         return `
           <div class="w-train-row" style="grid-template-columns: 1.5fr 100px 1.1fr 120px;">
             <div class="wt-time-route" ${focusAttr}>
-              <div class="wt-times" style="font-family:var(--font-sans);font-size:13.5px;">${h.name}</div>
-              <div class="wt-stations"><i data-lucide="map-pin" style="width:12px;height:12px;color:var(--accent);"></i> <span>${locText}</span></div>
+              <div class="wt-times" style="font-family:var(--font-sans);font-size:13.5px;">${escapeHtml(h.name)}</div>
+              <div class="wt-stations"><i data-lucide="map-pin" style="width:12px;height:12px;color:var(--accent);"></i> <span>${escapeHtml(locText)}</span></div>
             </div>
             <div>
               <span class="seat-chip avail"><i data-lucide="star" style="width:11px;height:11px;"></i> ${scoreBadge}</span>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${starText} ${h.review_count ? `· ${h.review_count}` : ''}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${starText} ${h.review_count ? `· ${escapeHtml(h.review_count)}` : ''}</div>
             </div>
             <div class="wt-seats">
-              ${h.quote ? `<span class="seat-chip">"${h.quote}"</span>` : ''}
+              ${h.quote ? `<span class="seat-chip">"${escapeHtml(h.quote)}"</span>` : ''}
             </div>
             <div style="text-align:right;">
               <div class="wt-price">${formatPriceHtml(h.price, destCurr, turnId)}</div>
-              ${h.tax_note ? `<div style="font-size:10.5px;color:var(--text-muted);">${h.tax_note}</div>` : ''}
+              ${h.tax_note ? `<div style="font-size:10.5px;color:var(--text-muted);">${escapeHtml(h.tax_note)}</div>` : ''}
             </div>
           </div>
         `;
@@ -3526,29 +3546,29 @@
       const city = meta.city || intent.attraction_city || intent.to_city || '';
 
       const rows = attractions.slice(0, 6).map(a => {
-        const scoreBadge = a.score ? `${a.score}分` : '必去';
+        const scoreBadge = a.score ? `${escapeHtml(a.score)}分` : '必去';
         const rankText = a.rank_badge || (a.tags && a.tags[0]) || '热门打卡';
-        const safeName = (a.name || '').replace(/'/g, "\\'");
+        const safeName = escapeJsStr(a.name || '');
         const focusAttr = (a.lat && a.lon)
-          ? `onclick="focusPlaceOnTurnMap(${turnId}, '${safeName}', ${a.lat}, ${a.lon}, 'attraction', ${a.price || 0})" style="cursor:pointer;" title="点击在地图上定位该景点"`
+          ? `onclick="focusPlaceOnTurnMap(${turnId}, '${safeName}', ${Number(a.lat) || 0}, ${Number(a.lon) || 0}, 'attraction', ${Number(a.price) || 0})" style="cursor:pointer;" title="点击在地图上定位该景点"`
           : '';
         return `
           <div class="w-train-row" style="grid-template-columns: 1.55fr 110px 1.15fr 115px;">
             <div class="wt-time-route" ${focusAttr}>
-              <div class="wt-times" style="font-family:var(--font-sans);font-size:13.5px;">${a.name}</div>
-              <div class="wt-stations"><i data-lucide="compass" style="width:12px;height:12px;color:var(--accent);"></i> <span>${a.open_time || '常规开放'}${a.play_duration ? ` · ${a.play_duration}` : ''}</span></div>
+              <div class="wt-times" style="font-family:var(--font-sans);font-size:13.5px;">${escapeHtml(a.name)}</div>
+              <div class="wt-stations"><i data-lucide="compass" style="width:12px;height:12px;color:var(--accent);"></i> <span>${escapeHtml(a.open_time || '常规开放')}${a.play_duration ? ` · ${escapeHtml(a.play_duration)}` : ''}</span></div>
             </div>
             <div>
               <span class="seat-chip avail"><i data-lucide="award" style="width:11px;height:11px;"></i> ${scoreBadge}</span>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${rankText}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">${escapeHtml(rankText)}</div>
             </div>
             <div class="wt-seats">
-              ${a.ticket_name ? `<span class="seat-chip">${a.ticket_name}</span>` : ''}
-              ${(a.features || []).slice(0, 1).map(f => `<span class="seat-chip">${f}</span>`).join('')}
+              ${a.ticket_name ? `<span class="seat-chip">${escapeHtml(a.ticket_name)}</span>` : ''}
+              ${(a.features || []).slice(0, 1).map(f => `<span class="seat-chip">${escapeHtml(f)}</span>`).join('')}
             </div>
             <div style="text-align:right;">
               <div class="wt-price">${a.is_free || !a.price ? '<span style="color:var(--green);font-size:13px;">免费开放</span>' : formatPriceHtml(a.price, destCurr, turnId)}</div>
-              ${a.sales ? `<div style="font-size:10.5px;color:var(--text-muted);">${a.sales}</div>` : ''}
+              ${a.sales ? `<div style="font-size:10.5px;color:var(--text-muted);">${escapeHtml(a.sales)}</div>` : ''}
             </div>
           </div>
         `;
@@ -3823,14 +3843,16 @@
         const priceHtml = pt.price
           ? `<span class="pin-price">${formatConvertedValue(pt.price, activeCurrency)}</span>`
           : '';
-        const badgeChar = customBadgeText || (displayIndex !== null ? displayIndex : '•');
+        const badgeChar = escapeHtml(customBadgeText || (displayIndex !== null ? displayIndex : '•'));
+        const safePinName = escapeHtml(pt.name || '');
+        const safeSubtitle = escapeHtml(pt.subtitle || '');
         const icon = L.divIcon({
           className: 'custom-map-pin-icon',
           html: `
             <div class="map-pin-wrap">
-              <div class="map-pin-badge ${cat}">${badgeChar}</div>
+              <div class="map-pin-badge ${escapeHtml(cat)}">${badgeChar}</div>
               <div class="map-pin-card">
-                <span>${pt.name}</span>
+                <span>${safePinName}</span>
                 ${priceHtml}
               </div>
             </div>
@@ -3843,10 +3865,10 @@
         const popupHtml = `
           <div style="min-width:170px;">
             <div style="font-weight:700;font-size:13px;color:var(--text-main);margin-bottom:3px;">
-              ${displayIndex ? `<span style="color:var(--accent);">#${displayIndex}</span> ` : ''}${pt.name}
+              ${displayIndex ? `<span style="color:var(--accent);">#${escapeHtml(displayIndex)}</span> ` : ''}${safePinName}
             </div>
-            ${pt.subtitle ? `<div style="font-size:11.5px;color:var(--text-secondary);margin-bottom:4px;">${pt.subtitle}</div>` : ''}
-            ${pt.price ? `<div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent);">实时参考价：${formatConvertedValue(pt.price, activeCurrency)}${activeCurrency !== 'CNY' ? ` (¥${pt.price})` : ''}</div>` : ''}
+            ${safeSubtitle ? `<div style="font-size:11.5px;color:var(--text-secondary);margin-bottom:4px;">${safeSubtitle}</div>` : ''}
+            ${pt.price ? `<div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--accent);">实时参考价：${formatConvertedValue(pt.price, activeCurrency)}${activeCurrency !== 'CNY' ? ` (¥${escapeHtml(pt.price)})` : ''}</div>` : ''}
           </div>
         `;
         const mk = L.marker(latlon, { icon }).addTo(map).bindPopup(popupHtml);
@@ -4185,7 +4207,7 @@
       const daysHtml = itinerary.days.map((d, dIdx) => `
         <div class="it-day-block">
           <div class="it-day-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-            <span>第 ${d.day} 天 (${d.date || ''}) · ${d.theme || ''}</span>
+            <span>第 ${escapeHtml(d.day)} 天 (${escapeHtml(d.date || '')}) · ${escapeHtml(d.theme || '')}</span>
             <button class="filter-pill" style="padding:2px 8px;font-size:11px;" onclick="plotItineraryDayOnMap(${turnId}, ${dIdx})">
               <i data-lucide="compass" style="width:11px;height:11px;"></i>
               <span>在地图画此日路线</span>
@@ -4193,10 +4215,10 @@
           </div>
           ${(d.items || []).map(item => `
             <div class="it-node">
-              <code>${item.time || ''}</code> <strong>${item.title || ''}</strong>
-              ${item.location ? `<span style="color:var(--text-muted);">(@${item.location})</span>` : ''}
-              ${item.cost ? `<span style="color:var(--accent);font-family:var(--font-mono);"> ${formatPriceInline(item.cost)}</span>` : ''}
-              — ${item.detail || ''}
+              <code>${escapeHtml(item.time || '')}</code> <strong>${escapeHtml(item.title || '')}</strong>
+              ${item.location ? `<span style="color:var(--text-muted);">(@${escapeHtml(item.location)})</span>` : ''}
+              ${item.cost ? `<span style="color:var(--accent);font-family:var(--font-mono);"> ${formatPriceInline(escapeHtml(item.cost))}</span>` : ''}
+              — ${escapeHtml(item.detail || '')}
             </div>
           `).join('')}
         </div>
@@ -4207,7 +4229,7 @@
           <div class="widget-header">
             <div class="widget-title">
               <span class="widget-icon-badge"><i data-lucide="map"></i></span>
-              <span>${itinerary.title || '行程安排'} ${itinerary.budget_total ? `· 预计总花费 ${formatPriceInline(itinerary.budget_total)}` : ''}</span>
+              <span>${escapeHtml(itinerary.title || '行程安排')} ${itinerary.budget_total ? `· 预计总花费 ${formatPriceInline(escapeHtml(itinerary.budget_total))}` : ''}</span>
             </div>
             <button class="filter-pill" onclick="exportTurnIcs(${turnId})">
               <i data-lucide="calendar-plus" style="width:13px;height:13px;"></i>
@@ -4215,7 +4237,7 @@
             </button>
           </div>
           <div class="itinerary-widget-body">
-            ${itinerary.hotel_tip ? `<div style="font-size:12px;color:var(--green);background:var(--green-bg);padding:8px 12px;border-radius:8px;display:flex;align-items:center;gap:6px;"><i data-lucide="check-circle-2" style="width:14px;height:14px;"></i><span><strong>住宿与出行贴士：</strong>${itinerary.hotel_tip}</span></div>` : ''}
+            ${itinerary.hotel_tip ? `<div style="font-size:12px;color:var(--green);background:var(--green-bg);padding:8px 12px;border-radius:8px;display:flex;align-items:center;gap:6px;"><i data-lucide="check-circle-2" style="width:14px;height:14px;"></i><span><strong>住宿与出行贴士：</strong>${escapeHtml(itinerary.hotel_tip)}</span></div>` : ''}
             ${daysHtml}
           </div>
         </div>
@@ -4318,7 +4340,7 @@
 
       const userRow = document.createElement('div');
       userRow.className = 'msg-row user';
-      userRow.innerHTML = `<div class="user-bubble">${text.replace(/</g, '&lt;')}</div>`;
+      userRow.innerHTML = `<div class="user-bubble">${escapeHtml(text)}</div>`;
       stream.appendChild(userRow);
 
       const aiRow = document.createElement('div');

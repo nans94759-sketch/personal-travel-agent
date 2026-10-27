@@ -23,8 +23,11 @@ import math
 import os
 import re
 import subprocess
+import threading
 import urllib.parse
 from typing import Any, Dict, List, Optional, Tuple
+
+from compliance import guard, source_allowed
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CACHE_DIR = os.path.join(BASE_DIR, ".cache")
@@ -348,6 +351,7 @@ KNOWN_COORDS_WGS84: Dict[str, Tuple[float, float]] = {
 
 class SmartRouteMapEngine:
     def __init__(self) -> None:
+        self._cache_lock = threading.Lock()
         self._mem_cache: Dict[str, Tuple[float, float]] = dict(KNOWN_COORDS_WGS84)
         self._load_disk_cache()
 
@@ -364,17 +368,20 @@ class SmartRouteMapEngine:
             pass
 
     def _save_disk_cache(self) -> None:
-        try:
-            os.makedirs(CACHE_DIR, exist_ok=True)
-            serializable = {
-                k: [round(v[0], 6), round(v[1], 6)]
-                for k, v in self._mem_cache.items()
-                if k not in KNOWN_COORDS_WGS84
-            }
-            with open(GEOCODE_CACHE_FILE, "w", encoding="utf-8") as f:
-                json.dump(serializable, f, ensure_ascii=False, indent=2)
-        except Exception:
-            pass
+        with self._cache_lock:
+            try:
+                os.makedirs(CACHE_DIR, exist_ok=True)
+                serializable = {
+                    k: [round(v[0], 6), round(v[1], 6)]
+                    for k, v in list(self._mem_cache.items())
+                    if k not in KNOWN_COORDS_WGS84
+                }
+                tmp_file = f"{GEOCODE_CACHE_FILE}.{threading.get_ident()}.tmp"
+                with open(tmp_file, "w", encoding="utf-8") as f:
+                    json.dump(serializable, f, ensure_ascii=False, indent=2)
+                os.replace(tmp_file, GEOCODE_CACHE_FILE)
+            except Exception:
+                pass
 
     def resolve_point(
         self, query: str, city_hint: str = "", allow_network: bool = True
@@ -406,35 +413,69 @@ class SmartRouteMapEngine:
                 return self._mem_cache[city_hint]
             return None
 
-        # Live lookup via Ctrip Open GlobalSearch API
+        # Live lookup via Ctrip Open GlobalSearch API (skipped in commercial mode)
         search_kw = f"{city_hint} {q_raw}".strip() if city_hint and city_hint not in q_raw else q_raw
-        try:
-            url = (
-                "https://m.ctrip.com/restapi/h5api/globalsearch/search"
-                f"?action=online&source=globalonline&keyword={urllib.parse.quote(search_kw)}"
-            )
-            raw = subprocess.check_output(
-                ["curl", "-sS", "--max-time", "4", url, "-H", "User-Agent: Mozilla/5.0"],
-                timeout=5,
-                stderr=subprocess.DEVNULL,
-            ).decode("utf-8", errors="ignore")
-            items = json.loads(raw).get("data", [])
-            for item in items:
-                lat = float(item.get("lat") or 0.0)
-                lon = float(item.get("lon") or 0.0)
-                if abs(lat) > 0.01 and abs(lon) > 0.01:
-                    # Ctrip globalsearch returns GCJ02 for Mainland China items, WGS84 for overseas
-                    if is_in_mainland_china(lat, lon):
-                        wlat, wlon = gcj02_to_wgs84(lat, lon)
-                    else:
-                        wlat, wlon = lat, lon
-                    self._mem_cache[q_raw] = (wlat, wlon)
-                    if q_clean:
-                        self._mem_cache[q_clean] = (wlat, wlon)
-                    self._save_disk_cache()
-                    return (wlat, wlon)
-        except Exception:
-            pass
+        if source_allowed("ctrip.h5api_globalsearch"):
+            try:
+                url = (
+                    "https://m.ctrip.com/restapi/h5api/globalsearch/search"
+                    f"?action=online&source=globalonline&keyword={urllib.parse.quote(search_kw)}"
+                )
+                raw = subprocess.check_output(
+                    ["curl", "-sS", "--max-time", "4", url, "-H", "User-Agent: Mozilla/5.0"],
+                    timeout=5,
+                    stderr=subprocess.DEVNULL,
+                ).decode("utf-8", errors="ignore")
+                items = json.loads(raw).get("data", [])
+                for item in items:
+                    lat = float(item.get("lat") or 0.0)
+                    lon = float(item.get("lon") or 0.0)
+                    if abs(lat) > 0.01 and abs(lon) > 0.01:
+                        # Ctrip globalsearch returns GCJ02 for Mainland China items, WGS84 for overseas
+                        if is_in_mainland_china(lat, lon):
+                            wlat, wlon = gcj02_to_wgs84(lat, lon)
+                        else:
+                            wlat, wlon = lat, lon
+                        self._mem_cache[q_raw] = (wlat, wlon)
+                        if q_clean:
+                            self._mem_cache[q_clean] = (wlat, wlon)
+                        self._save_disk_cache()
+                        return (wlat, wlon)
+            except Exception:
+                pass
+
+        # Whitelisted fallback: OpenStreetMap Nominatim
+        if source_allowed("nominatim.geocode"):
+            try:
+                nom_url = (
+                    "https://nominatim.openstreetmap.org/search"
+                    f"?q={urllib.parse.quote(search_kw)}&format=json&limit=1"
+                )
+                raw_nom = subprocess.check_output(
+                    [
+                        "curl",
+                        "-sS",
+                        "--max-time",
+                        "4",
+                        nom_url,
+                        "-H",
+                        "User-Agent: PersonalTravelAgent/1.0",
+                    ],
+                    timeout=5,
+                    stderr=subprocess.DEVNULL,
+                ).decode("utf-8", errors="ignore")
+                nom_items = json.loads(raw_nom)
+                if isinstance(nom_items, list) and nom_items:
+                    wlat = float(nom_items[0].get("lat") or 0.0)
+                    wlon = float(nom_items[0].get("lon") or 0.0)
+                    if abs(wlat) > 0.01 and abs(wlon) > 0.01:
+                        self._mem_cache[q_raw] = (wlat, wlon)
+                        if q_clean:
+                            self._mem_cache[q_clean] = (wlat, wlon)
+                        self._save_disk_cache()
+                        return (wlat, wlon)
+            except Exception:
+                pass
 
         if city_hint and city_hint != q_raw:
             return self.resolve_point(city_hint, "", allow_network=False)

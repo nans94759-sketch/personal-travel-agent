@@ -249,10 +249,11 @@ function showLoading() {
 function renderPlan(plan) {
   state.plan = plan;
   const out = $("out");
+  const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   if (!plan.ok) {
     out.className = "";
     out.classList.remove("hidden");
-    out.innerHTML = `<div class="card"><p>${plan.error || "—"}</p></div>`;
+    out.innerHTML = `<div class="card"><p>${esc(plan.error || "—")}</p></div>`;
     return;
   }
   const legs = plan.legs.map((l) => {

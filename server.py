@@ -11,6 +11,8 @@ Pure Chat + Inline Tool-Call Widgets Architecture:
 """
 
 import asyncio
+import concurrent.futures
+import logging
 import os
 from typing import Any, Dict, List
 
@@ -37,6 +39,11 @@ from provider_map import SmartRouteMapEngine
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
+MAX_MESSAGE_LENGTH = 500
+MAX_HISTORY_TURNS = 10
+EXECUTOR_KEY = web.AppKey("executor", concurrent.futures.ThreadPoolExecutor)
+
+logger = logging.getLogger("travel_agent")
 
 train_client = Train12306Client()
 flight_client = FlightScraperClient()
@@ -50,6 +57,17 @@ async def handle_index(request: web.Request) -> web.FileResponse:
     return web.FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
+async def handle_health(request: web.Request) -> web.Response:
+    return web.json_response(
+        {
+            "ok": True,
+            "status": "healthy",
+            "stations_loaded": len(train_client.stations_by_code),
+            "known_coords_loaded": len(map_engine._mem_cache),
+        }
+    )
+
+
 # ---------------------------------------------------------------------------
 # Inbound product (English, USD). Pure computation over static city data —
 # no scraper is touched, so these routes stay available in commercial mode.
@@ -58,10 +76,16 @@ async def handle_index(request: web.Request) -> web.FileResponse:
 
 def _inbound_request(payload: Dict[str, Any]) -> Dict[str, Any]:
     lang = (payload.get("lang") or "en").strip().lower()
+    try:
+        days_val = int(payload.get("days") or 7)
+    except (TypeError, ValueError):
+        days_val = 7
+    raw_cities = payload.get("cities")
+    cities = [str(c) for c in raw_cities if c] if isinstance(raw_cities, list) else []
     return {
-        "cities": payload.get("cities") or [],
+        "cities": cities,
         "start": (payload.get("start") or "").strip(),
-        "days": int(payload.get("days") or 7),
+        "days": days_val,
         "pace": (payload.get("pace") or "balanced").strip(),
         "lang": lang if lang in ("en", "zh") else "en",
     }
@@ -140,8 +164,6 @@ async def handle_inbound_print(request: web.Request) -> web.Response:
         charset="utf-8",
         headers={"Cache-Control": "no-store"},
     )
-
-
 async def handle_chat_tools(request: web.Request) -> web.Response:
     """
     Step 1 of a chat turn:
@@ -155,7 +177,14 @@ async def handle_chat_tools(request: web.Request) -> web.Response:
         body = {}
 
     message = (body.get("message") or "").strip()
+    if len(message) > MAX_MESSAGE_LENGTH:
+        return web.json_response(
+            {"ok": False, "error": f"输入内容过长（最多支持 {MAX_MESSAGE_LENGTH} 字）"},
+            status=400,
+        )
     context = body.get("context") or {}
+    if not isinstance(context, dict):
+        context = {}
     preferred_model = (body.get("model") or "deepseek-v4.1-flash").strip()
 
     loop = asyncio.get_running_loop()
@@ -545,6 +574,11 @@ async def handle_chat_reply(request: web.Request) -> web.Response:
         body = {}
 
     message = (body.get("message") or "").strip()
+    if len(message) > MAX_MESSAGE_LENGTH:
+        return web.json_response(
+            {"ok": False, "error": f"输入内容过长（最多支持 {MAX_MESSAGE_LENGTH} 字）"},
+            status=400,
+        )
     intent = body.get("intent") or {}
     trains = body.get("trains") or []
     euro_trains = body.get("euro_trains") or []
@@ -556,7 +590,8 @@ async def handle_chat_reply(request: web.Request) -> web.Response:
     stopovers = body.get("stopovers") or []
     transfers = body.get("transfers") or []
     comparison = body.get("comparison") or {}
-    history = body.get("history") or []
+    raw_history = body.get("history") or []
+    history = raw_history[-MAX_HISTORY_TURNS:] if isinstance(raw_history, list) else []
     preferred_model = (body.get("model") or "deepseek-v4.1-flash").strip()
 
     loop = asyncio.get_running_loop()
@@ -761,8 +796,30 @@ async def compliance_middleware(
 
 
 def create_app() -> web.Application:
-    app = web.Application(middlewares=[compliance_middleware])
+    app = web.Application(
+        client_max_size=256 * 1024,
+        middlewares=[compliance_middleware],
+    )
+
+    async def _on_startup(app_instance: web.Application) -> None:
+        workers = max(8, int(os.environ.get("WORKER_THREADS", "24")))
+        executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=workers, thread_name_prefix="travel_io"
+        )
+        app_instance[EXECUTOR_KEY] = executor
+        asyncio.get_running_loop().set_default_executor(executor)
+
+    async def _on_cleanup(app_instance: web.Application) -> None:
+        executor = app_instance.get(EXECUTOR_KEY)
+        if executor:
+            executor.shutdown(wait=False)
+
+    app.on_startup.append(_on_startup)
+    app.on_cleanup.append(_on_cleanup)
+
     app.router.add_get("/", handle_index)
+    app.router.add_get("/health", handle_health)
+    app.router.add_get("/api/health", handle_health)
     app.router.add_get("/inbound", handle_inbound_page)
     app.router.add_get("/api/inbound/cities", handle_inbound_cities)
     app.router.add_post("/api/inbound/plan", handle_inbound_plan)
@@ -780,7 +837,12 @@ def create_app() -> web.Application:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=os.environ.get("LOG_LEVEL", "INFO").upper(),
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
     os.makedirs(STATIC_DIR, exist_ok=True)
+    host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", 8868))
-    print(f"🚀 个人行程安排智能体 (纯对话版) 已启动: http://127.0.0.1:{port}", flush=True)
-    web.run_app(create_app(), host="127.0.0.1", port=port, print=None)
+    logger.info("🚀 个人行程安排智能体已启动: http://%s:%d", host, port)
+    web.run_app(create_app(), host=host, port=port, print=None)

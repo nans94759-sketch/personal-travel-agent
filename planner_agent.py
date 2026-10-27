@@ -116,19 +116,28 @@ def parse_chinese_date(message: str, default_date: Optional[str] = None) -> Tupl
     if not default_date:
         default_date = (today + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
 
-    m_ymd = re.search(r"(202\d)[-/年.](\d{1,2})[-/月.](\d{1,2})", message)
+    m_ymd = re.search(r"(20\d{2})[-/年.](\d{1,2})[-/月.](\d{1,2})", message)
     if m_ymd:
-        return (
-            f"{int(m_ymd.group(1)):04d}-{int(m_ymd.group(2)):02d}-{int(m_ymd.group(3)):02d}",
-            True,
-        )
+        try:
+            dt = datetime.date(int(m_ymd.group(1)), int(m_ymd.group(2)), int(m_ymd.group(3)))
+            return dt.strftime("%Y-%m-%d"), True
+        except ValueError:
+            pass
 
-    m_md = re.search(r"(\d{1,2})[月/-](\d{1,2})[日号]?", message)
+    m_md = re.search(
+        r"(?<!\d)(\d{1,2})月(\d{1,2})[日号]?(?!\d)|(?<!\d)(\d{1,2})-(\d{1,2})[日号]|(?<![\d/])(\d{1,2})/(\d{1,2})(?![\d/点时星天日人折元块万])",
+        message,
+    )
     if m_md:
-        return (
-            f"{today.year:04d}-{int(m_md.group(1)):02d}-{int(m_md.group(2)):02d}",
-            True,
-        )
+        mm = int(m_md.group(1) or m_md.group(3) or m_md.group(5))
+        dd = int(m_md.group(2) or m_md.group(4) or m_md.group(6))
+        for yr in (today.year, today.year + 1):
+            try:
+                cand = datetime.date(yr, mm, dd)
+                if cand >= today or yr > today.year:
+                    return cand.strftime("%Y-%m-%d"), True
+            except ValueError:
+                continue
 
     if "大后天" in message:
         return (today + datetime.timedelta(days=3)).strftime("%Y-%m-%d"), True
@@ -179,7 +188,7 @@ def parse_user_intent(
     target_date, date_from_msg = parse_chinese_date(message, default_date)
 
     msg_for_cities = re.sub(
-        r"(202\d[-/年.]\d{1,2}[-/月.]\d{1,2}|\d{1,2}[月/-]\d{1,2}[日号]?|大后天|后天|明天|明日|今天|今日|(?:下周|下星期|下礼拜|本周|这周|本星期|周|星期|礼拜)[一二三四五六日天])",
+        r"(20\d{2}[-/年.]\d{1,2}[-/月.]\d{1,2}|(?<!\d)\d{1,2}月\d{1,2}[日号]?(?!\d)|(?<!\d)\d{1,2}-\d{1,2}[日号]|大后天|后天|明天|明日|今天|今日|(?:下周|下星期|下礼拜|本周|这周|本星期|周|星期|礼拜)[一二三四五六日天])",
         " ",
         message,
     )
@@ -744,6 +753,13 @@ def call_llm_raw(
             base_urls = [DASHSCOPE_URL]
 
             for target_url in base_urls:
+                body_str = json.dumps(payload, ensure_ascii=False)
+                curl_cfg = (
+                    f'url = "{target_url}"\n'
+                    f'header = "Authorization: Bearer {api_key}"\n'
+                    'header = "Content-Type: application/json"\n'
+                    f"data-raw = {json.dumps(body_str, ensure_ascii=False)}\n"
+                )
                 cmd = [
                     "curl",
                     "-sS",
@@ -753,16 +769,14 @@ def call_llm_raw(
                     str(timeout),
                     "-X",
                     "POST",
-                    target_url,
-                    "-H",
-                    f"Authorization: Bearer {api_key}",
-                    "-H",
-                    "Content-Type: application/json",
-                    "-d",
-                    json.dumps(payload, ensure_ascii=False),
+                    "-K",
+                    "-",
                 ]
                 raw_out = subprocess.check_output(
-                    cmd, timeout=timeout + 3, stderr=subprocess.DEVNULL
+                    cmd,
+                    input=curl_cfg.encode("utf-8"),
+                    timeout=timeout + 3,
+                    stderr=subprocess.DEVNULL,
                 ).decode("utf-8", errors="ignore")
                 data = json.loads(raw_out)
                 content = (
@@ -955,7 +969,7 @@ def generate_chat_response(
         for h in hotels[:8]
     ]
     attractions_brief = [
-        f"{a['name']}(评分:{a.get('score')}分/{a.get('comment_text','')}, 门票:{'免费' if a.get('is_free') else ('¥'+str(a.get('price')) if a.get('price') else '详询')}, 外币参考:{a.get('foreign_price') or '-'}, 票种:{a.get('ticket_name') or '-'}, 开放:{a.get('open_time') or '-'}, 排名:{a.get('ranking_text') or '-'})"
+        f"{a['name']}(评分:{a.get('score')}分/{a.get('review_count') or a.get('comment_text','')}, 门票:{'免费' if a.get('is_free') else ('¥'+str(a.get('price')) if a.get('price') else '详询')}, 外币参考:{a.get('foreign_price') or '-'}, 票种:{a.get('ticket_name') or '-'}, 开放:{a.get('open_time') or '-'}, 排名:{a.get('rank_badge') or a.get('ranking_text') or '-'})"
         for a in attractions[:8]
     ]
     passes_brief = [
@@ -1107,9 +1121,14 @@ def generate_chat_response(
         fallback_itinerary = None
         if needs_itinerary:
             days_cnt = max(1, min(int(intent.get("days") or 2), 5))
+            try:
+                base_dt = datetime.date.fromisoformat(date_str)
+            except Exception:
+                base_dt = datetime.date.today() + datetime.timedelta(days=1)
             day_list = []
             total_cost = 0
             for d_idx in range(1, days_cnt + 1):
+                day_iso = (base_dt + datetime.timedelta(days=d_idx - 1)).strftime("%Y-%m-%d")
                 items = []
                 if d_idx == 1:
                     if trains:
@@ -1127,7 +1146,7 @@ def generate_chat_response(
                         et0 = euro_trains[0]
                         items.append({
                             "time": et0.get("dep_time") or "09:00",
-                            "title": f"搭乘欧洲铁路 {et0['train_code']} ({et0.get('operator','')})",
+                            "title": f"搭乘欧洲铁路 {et0['train_code']} ({et0.get('operators') or et0.get('operator','')})",
                             "location": f"{et0['from_station']} ➔ {et0['to_station']}",
                             "detail": f"历时 {et0['duration_text']}，换乘 {et0.get('transfers',0)} 次",
                             "cost": 0,
@@ -1161,8 +1180,8 @@ def generate_chat_response(
                     items.append({
                         "time": "15:30" if idx_a == 0 else "18:30",
                         "title": f"游览：{attr['name']}",
-                        "location": attr.get("zone") or attr.get("city_name") or attraction_city,
-                        "detail": f"{attr.get('ranking_text') or attr.get('comment_text') or '热门必打卡'} | 门票：{'¥'+str(c) if c else '免费'}{(' ('+attr['foreign_price']+')') if attr.get('foreign_price') else ''} | {attr.get('open_time') or '常规开放'}",
+                        "location": attr.get("district_name") or attr.get("zone") or attr.get("address") or attraction_city,
+                        "detail": f"{attr.get('rank_badge') or attr.get('ranking_text') or attr.get('comment_text') or '热门必打卡'} | 门票：{'¥'+str(c) if c else '免费'}{(' ('+attr['foreign_price']+')') if attr.get('foreign_price') else ''} | {attr.get('open_time') or '常规开放'}",
                         "cost": c,
                     })
                 if not items:
@@ -1175,7 +1194,7 @@ def generate_chat_response(
                     })
                 day_list.append({
                     "day": d_idx,
-                    "date": date_str if d_idx == 1 else f"Day {d_idx}",
+                    "date": day_iso,
                     "theme": f"{to_city or hotel_city}精选深度游 · 第{d_idx}天",
                     "items": items,
                 })
@@ -1219,40 +1238,60 @@ def generate_chat_response(
     }
 
 
+def _escape_ics_text(val: str) -> str:
+    return (
+        (val or "")
+        .replace("\\", "\\\\")
+        .replace(";", "\\;")
+        .replace(",", "\\,")
+        .replace("\r\n", "\\n")
+        .replace("\n", "\\n")
+    )
+
+
 def export_itinerary_to_ics(itinerary: Dict[str, Any]) -> str:
     """Convert structured itinerary JSON into standard RFC 5545 iCalendar (.ics) string."""
+    cal_title = _escape_ics_text(itinerary.get("title", "个人智能行程单"))
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
         "PRODID:-//TravelAgent//China Rail & Flight Smart Planner//CN",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
-        f"X-WR-CALNAME:{itinerary.get('title', '个人智能行程单')}",
+        f"X-WR-CALNAME:{cal_title}",
         "X-WR-TIMEZONE:Asia/Shanghai",
     ]
 
     now_utc = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     uid_counter = 1000
+    anchor_date = datetime.date.today() + datetime.timedelta(days=1)
 
-    for day_obj in itinerary.get("days", []):
-        date_str = day_obj.get("date", "")
-        if not re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
-            continue
-        ymd = date_str.replace("-", "")
+    for day_idx, day_obj in enumerate(itinerary.get("days", [])):
+        date_str = str(day_obj.get("date") or "").strip()
+        if re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
+            try:
+                parsed_dt = datetime.date.fromisoformat(date_str)
+                if day_idx == 0:
+                    anchor_date = parsed_dt
+            except ValueError:
+                parsed_dt = anchor_date + datetime.timedelta(days=day_idx)
+        else:
+            parsed_dt = anchor_date + datetime.timedelta(days=day_idx)
+        ymd = parsed_dt.strftime("%Y%m%d")
 
         for item in day_obj.get("items", []):
             uid_counter += 1
             t_str = item.get("time", "09:00")
-            m_t = re.search(r"(\d{1,2}):(\d{2})", t_str)
-            hh = int(m_t.group(1)) if m_t else 9
-            mm = int(m_t.group(2)) if m_t else 0
+            m_t = re.search(r"(\d{1,2}):(\d{2})", str(t_str))
+            hh = min(23, max(0, int(m_t.group(1)))) if m_t else 9
+            mm = min(59, max(0, int(m_t.group(2)))) if m_t else 0
             start_dt = f"{ymd}T{hh:02d}{mm:02d}00"
             end_hh = min(23, hh + 2)
             end_dt = f"{ymd}T{end_hh:02d}{mm:02d}00"
 
-            title = item.get("title", "行程节点").replace("\n", " ")
-            loc = item.get("location", "").replace("\n", " ")
-            detail = item.get("detail", "").replace("\n", "\\n")
+            title = _escape_ics_text(str(item.get("title", "行程节点")).replace("\n", " "))
+            loc = _escape_ics_text(str(item.get("location", "")).replace("\n", " "))
+            detail = _escape_ics_text(str(item.get("detail", "")))
             cost = item.get("cost", 0)
             desc = f"{detail}\\n预计费用: ¥{cost}" if cost else detail
 
