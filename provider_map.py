@@ -31,6 +31,11 @@ from compliance import guard, source_allowed
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CACHE_DIR = os.path.join(BASE_DIR, ".cache")
+try:
+    os.makedirs(CACHE_DIR, exist_ok=True)
+except OSError:
+    CACHE_DIR = "/tmp/.cache"
+    os.makedirs(CACHE_DIR, exist_ok=True)
 GEOCODE_CACHE_FILE = os.path.join(CACHE_DIR, "geocode_cache.json")
 
 # ============================================================================
