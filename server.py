@@ -57,6 +57,12 @@ user_store = UserAndAdminStore(BASE_DIR)
 
 
 async def handle_index(request: web.Request) -> web.FileResponse:
+    """In commercial mode, `/` directly serves the English Inbound Planner (ChinaTripCopilot)."""
+    return web.FileResponse(os.path.join(STATIC_DIR, "inbound.html"))
+
+
+async def handle_zh_chat(request: web.Request) -> web.FileResponse:
+    """Chinese conversational workbench remains accessible at `/zh` and `/chat`."""
     return web.FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
@@ -127,6 +133,12 @@ async def handle_inbound_cities(request: web.Request) -> web.Response:
             "note_zh": c.note_zh,
         }
 
+    settings_map = user_store.get_settings_dict()
+    if settings_map.get("trip_alliance_id") and not os.environ.get("TRIP_COM_ALLIANCEID"):
+        os.environ["TRIP_COM_ALLIANCEID"] = settings_map["trip_alliance_id"]
+    if settings_map.get("trip_sid") and not os.environ.get("TRIP_COM_SID"):
+        os.environ["TRIP_COM_SID"] = settings_map["trip_sid"]
+
     return web.json_response(
         {
             "lang": lang,
@@ -134,6 +146,9 @@ async def handle_inbound_cities(request: web.Request) -> web.Response:
             "popular": [_row(c) for c in popular(8)],
             "all": [_row(c) for c in sorted(CITIES.values(), key=lambda x: x.en)],
             "affiliate_ready": bool(os.environ.get("TRIP_COM_ALLIANCEID")),
+            "custom_domain": settings_map.get("custom_domain", "chinatripcopilot.com"),
+            "concierge_price_usd": int(settings_map.get("concierge_price_usd", "29") or 29),
+            "concierge_checkout_url": settings_map.get("concierge_checkout_url", ""),
         }
     )
 
@@ -857,6 +872,8 @@ def create_app() -> web.Application:
     app.on_cleanup.append(_on_cleanup)
 
     app.router.add_get("/", handle_index)
+    app.router.add_get("/zh", handle_zh_chat)
+    app.router.add_get("/chat", handle_zh_chat)
     app.router.add_get("/health", handle_health)
     app.router.add_get("/api/health", handle_health)
     app.router.add_get("/inbound", handle_inbound_page)

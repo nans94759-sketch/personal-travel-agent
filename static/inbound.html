@@ -3,72 +3,97 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>China Trip Planner</title>
+<title>ChinaTripCopilot — AI China High-Speed Rail & Visa-Free Trip Planner</title>
 <style>
   :root{
-    --ink:#1c1c1e;--muted:#6b6f76;--line:#e6e3dc;--accent:#185FA5;--accent-soft:#eaf1f8;
-    --bg:#f6f5f1;--card:#fff;--ok:#2e7d50;--shadow:0 1px 2px rgba(0,0,0,.05),0 10px 30px rgba(0,0,0,.05)
+    --ink:#15161A;--muted:#5E626B;--line:#E5E0D5;--accent:#185FA5;--accent-soft:#EAF1F8;
+    --gold:#EA580C;--gold-soft:#FFF0E6;
+    --bg:#F6F5F1;--card:#FFFFFF;--ok:#0F766E;--ok-soft:#E6F6F4;
+    --shadow:0 1px 2px rgba(0,0,0,.04),0 12px 32px rgba(21,22,26,.06)
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
     font:15px/1.6 -apple-system,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Microsoft YaHei",Arial,sans-serif}
-  .wrap{max-width:940px;margin:0 auto;padding:28px 22px 80px}
-  header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;letter-spacing:-.01em}
-  .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
-  .lang{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
-  .lang button{border:0;background:#fff;padding:6px 13px;font-size:13px;cursor:pointer;color:var(--muted);font-family:inherit}
-  .lang button[aria-pressed="true"]{background:var(--accent);color:#fff}
+  .wrap{max-width:980px;margin:0 auto;padding:22px 20px 80px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.02em}
+  .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px rgba(234,88,12,.16)}
+  .domain-pill{font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--ok-soft);color:var(--ok)}
+  .top-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .nav-link{font-size:12.5px;font-weight:600;color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;cursor:pointer;transition:.15s}
+  .nav-link:hover{border-color:var(--ink);color:var(--ink)}
+  .lang{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#fff}
+  .lang button{border:0;background:#fff;padding:5px 12px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--muted);font-family:inherit}
+  .lang button[aria-pressed="true"]{background:var(--ink);color:#fff}
 
-  .hero{background:linear-gradient(135deg,#1c3f63,#185FA5);color:#fff;border-radius:16px;padding:30px 30px 26px;margin-bottom:22px;box-shadow:var(--shadow)}
-  .hero h1{margin:0 0 8px;font-size:28px;font-weight:650;letter-spacing:-.02em}
-  .hero p{margin:0;max-width:620px;font-size:15.5px;color:#dfeaf5}
-  .hero .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
-  .hero .tag{font-size:12.5px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);padding:4px 11px;border-radius:999px;color:#eaf2fb}
+  .hero{background:linear-gradient(135deg,#132A42 0%,#185FA5 100%);color:#fff;border-radius:18px;padding:28px 28px 24px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .hero h1{margin:0 0 8px;font-size:27px;font-weight:700;letter-spacing:-.02em}
+  .hero p{margin:0;max-width:680px;font-size:15px;color:#DFEAF5}
+  .hero .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .hero .tag{font-size:12px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);padding:4px 11px;border-radius:999px;color:#EAF2FB}
 
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px;box-shadow:var(--shadow)}
-  .label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px}
+  /* Auto-Scrolling Smart Route Recommendations Bar */
+  .marquee-bar{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+  .marquee-track{
+    flex:1;min-width:0;display:flex;flex-wrap:nowrap;align-items:center;gap:8px;
+    overflow-x:auto;overflow-y:visible;padding:5px 4px 6px;scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+    mask-image:linear-gradient(to right,transparent 0px,black 10px,black calc(100% - 14px),transparent 100%);
+    -webkit-mask-image:linear-gradient(to right,transparent 0px,black 10px,black calc(100% - 14px),transparent 100%)
+  }
+  .marquee-track::-webkit-scrollbar{display:none}
+  .route-pill{
+    flex-shrink:0;white-space:nowrap;border:1px solid var(--line);background:#fff;
+    border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;color:var(--ink);
+    cursor:pointer;display:inline-flex;align-items:center;gap:7px;
+    box-shadow:0 2px 6px rgba(0,0,0,.03);transition:.18s
+  }
+  .route-pill:hover{background:var(--ink);color:#fff;border-color:var(--ink);transform:translateY(-1px)}
+  .route-pill .rp-badge{font-size:10.5px;padding:1px 7px;border-radius:999px;background:var(--gold-soft);color:var(--gold);font-weight:700}
+  .route-pill:hover .rp-badge{background:rgba(255,255,255,.2);color:#FDBA74}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:var(--shadow)}
+  .label{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin:0 0 12px}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 15px;font-size:14px;cursor:pointer;color:var(--ink);transition:.12s;font-family:inherit;display:inline-flex;align-items:center;gap:7px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 15px;font-size:13.5px;cursor:pointer;color:var(--ink);transition:.12s;font-family:inherit;display:inline-flex;align-items:center;gap:7px}
   .chip:hover{border-color:#b9b6ad}
   .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
   .chip .x{font-size:13px;opacity:.7;line-height:1}
-  .row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-top:6px}
-  .field{display:flex;flex-direction:column;gap:6px}
-  .field span{font-size:12px;color:var(--muted)}
-  input,select{padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#fff;color:var(--ink);font-family:inherit}
+  .row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-top:6px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field span{font-size:12px;color:var(--muted);font-weight:600}
+  input,select{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;background:#fff;color:var(--ink);font-family:inherit}
   .grow{flex:1;min-width:180px}
-  button.primary{padding:11px 22px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-size:14.5px;cursor:pointer;font-family:inherit;font-weight:550;transition:.12s}
+  button.primary{padding:11px 22px;border:0;border-radius:9px;background:var(--accent);color:#fff;font-size:14.5px;cursor:pointer;font-family:inherit;font-weight:600;transition:.12s}
   button.primary:hover{filter:brightness(1.06)}
   button.primary:disabled{opacity:.45;cursor:default}
-  .ghost{padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:13.5px;cursor:pointer;font-family:inherit;color:var(--ink)}
+  .ghost{padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink)}
   .ghost:hover{border-color:#b9b6ad}
-  .hint{color:var(--muted);font-size:12.5px;margin:14px 0 0}
+  .hint{color:var(--muted);font-size:12.5px;margin:12px 0 0}
 
   .loading{display:flex;align-items:center;gap:14px;color:var(--muted);font-size:14px;padding:30px 4px}
   .spin{width:22px;height:22px;border:3px solid var(--accent-soft);border-top-color:var(--accent);border-radius:50%;animation:sp 0.8s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
 
-  .result h2{font-size:19px;margin:0 0 4px;font-weight:600}
+  .result h2{font-size:20px;margin:0 0 4px;font-weight:700}
   .summary{display:flex;flex-wrap:wrap;gap:10px 26px;padding:14px 0 16px;border-bottom:1px solid var(--line)}
   .summary div{font-size:12px;color:var(--muted)}
-  .summary b{display:block;font-size:15.5px;font-weight:550;color:var(--ink);margin-top:2px}
+  .summary b{display:block;font-size:15.5px;font-weight:600;color:var(--ink);margin-top:2px}
   .summary .tt{color:var(--accent)}
 
   .legs{margin:6px 0 4px}
   .leg{display:grid;grid-template-columns:74px 1fr auto;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
-  .leg .m{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:600}
+  .leg .m{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:700}
   .leg small{color:var(--muted);font-size:12.5px;display:block}
   .leg .d{color:var(--muted);font-size:13px;text-align:right;white-space:nowrap}
-  a.book{font-size:12.5px;color:#fff;background:var(--accent);text-decoration:none;border-radius:7px;padding:6px 12px;white-space:nowrap;display:inline-block}
-  a.book.ghost-l{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+  a.book{font-size:12.5px;color:#fff;background:var(--accent);text-decoration:none;border-radius:7px;padding:6px 12px;white-space:nowrap;display:inline-block;font-weight:600}
 
   .day{padding:16px 0;border-bottom:1px solid var(--line)}
   .day .dh{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
-  .day .dh .dt{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-  .day .dh .ct{font-size:16px;font-weight:550}
+  .day .dh .dt{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+  .day .dh .ct{font-size:16px;font-weight:600}
   .day .dh .ct small{color:var(--muted);font-weight:400;font-size:13px;margin-left:5px}
-  .day .dh a.hotel{margin-left:auto;font-size:12px;color:var(--accent);text-decoration:none;border:1px solid var(--accent);border-radius:6px;padding:4px 10px}
+  .day .dh a.hotel{margin-left:auto;font-size:12px;color:var(--accent);text-decoration:none;border:1px solid var(--accent);border-radius:6px;padding:4px 10px;font-weight:600}
   .item{display:grid;grid-template-columns:56px 14px 1fr;gap:12px;padding:5px 0;align-items:start}
   .item .t{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;padding-top:1px}
   .item .rail{position:relative}
@@ -78,16 +103,44 @@
   .item .x{font-size:14px}
   .item .x small{display:block;color:var(--muted);font-size:12.5px;margin-top:1px}
 
+  /* Track 2: $29 Concierge Pack Upsell Banner */
+  .concierge-card{
+    margin-top:18px;padding:20px 22px;border-radius:16px;
+    background:linear-gradient(135deg,#15161A 0%,#262932 100%);color:#fff;
+    display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap
+  }
+  .cc-left{flex:1;min-width:240px}
+  .cc-badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(234,88,12,.25);color:#FDBA74;margin-bottom:6px}
+  .cc-title{font-size:17px;font-weight:700;margin:0 0 6px}
+  .cc-list{margin:0;padding-left:18px;font-size:13px;color:#D5DAE2;line-height:1.65}
+  .cc-btn{
+    background:linear-gradient(135deg,#F97316,#EA580C);color:#fff;border:0;
+    border-radius:999px;padding:12px 22px;font-size:14px;font-weight:700;cursor:pointer;
+    white-space:nowrap;box-shadow:0 6px 20px rgba(234,88,12,.38);transition:.18s
+  }
+  .cc-btn:hover{transform:translateY(-1px);filter:brightness(1.06)}
+
   .note{font-size:12.5px;color:var(--muted);background:#f3f1ec;border-radius:8px;padding:10px 13px;margin:16px 0 0}
   .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
   .hidden{display:none}
-  footer{margin-top:34px;color:var(--muted);font-size:12px;line-height:1.7}
+  footer{margin-top:34px;color:var(--muted);font-size:12px;line-height:1.7;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+  /* Checkout / Order Modal */
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(21,22,26,.52);backdrop-filter:blur(4px);
+    display:none;align-items:center;justify-content:center;padding:16px;z-index:100
+  }
+  .modal-backdrop.open{display:flex}
+  .modal-box{
+    background:#fff;border-radius:18px;max-width:480px;width:100%;padding:22px;
+    box-shadow:0 24px 60px rgba(0,0,0,.22);display:flex;flex-direction:column;gap:12px
+  }
 
   @media (max-width: 680px) {
-    .wrap{padding:16px 14px 56px}
-    header{margin-bottom:14px}
-    .hero{padding:20px 18px;border-radius:14px;margin-bottom:16px}
-    .hero h1{font-size:22px}
+    .wrap{padding:14px 12px 56px}
+    header{margin-bottom:12px}
+    .hero{padding:20px 18px;border-radius:14px;margin-bottom:14px}
+    .hero h1{font-size:21px}
     .hero p{font-size:14px}
     .card{padding:16px 14px;border-radius:12px;margin-bottom:14px}
     .chips{gap:6px}
@@ -103,28 +156,44 @@
     .day .dh a.hotel{margin-left:0}
     .item{grid-template-columns:48px 12px 1fr;gap:8px}
     .actions button,.actions a{flex:1 1 auto;text-align:center}
+    .concierge-card{padding:16px}
+    .cc-btn{width:100%;text-align:center}
   }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="brand"><span class="dot"></span><span data-i18n="brand">China Trip Planner</span></div>
-    <div class="lang" role="group" aria-label="Language">
-      <button id="lang-en" aria-pressed="true">EN</button>
-      <button id="lang-zh" aria-pressed="false">中文</button>
+    <div class="brand">
+      <span class="dot"></span>
+      <span>ChinaTripCopilot</span>
+      <span class="domain-pill">240h Visa-Free & High-Speed Rail</span>
+    </div>
+    <div class="top-nav">
+      <a class="nav-link" href="/zh">💬 AI 对话版 (中文)</a>
+      <a class="nav-link" href="/admin">⚙️ Admin</a>
+      <div class="lang" role="group" aria-label="Language">
+        <button id="lang-en" aria-pressed="true">EN</button>
+        <button id="lang-zh" aria-pressed="false">中文</button>
+      </div>
     </div>
   </header>
 
   <section class="hero">
-    <h1 data-i18n="brand">China Trip Planner</h1>
+    <h1 id="heroTitle">ChinaTripCopilot — Smart China Rail & Itinerary Planner</h1>
     <p data-i18n="hero_lead"></p>
     <div class="tags">
       <span class="tag" data-i18n="tag_no_signup"></span>
       <span class="tag" data-i18n="tag_printable"></span>
-      <span class="tag" data-i18n="tag_indicative"></span>
+      <span class="tag">Trip.com Official Rail & Hotel Links</span>
+      <span class="tag" id="tagConcierge">$29 Full Concierge Pack Available</span>
     </div>
   </section>
+
+  <!-- Auto-Scrolling Smart Route Recommendations -->
+  <div class="marquee-bar">
+    <div class="marquee-track" id="routeMarquee"></div>
+  </div>
 
   <section class="card" id="builder">
     <p class="label" data-i18n="step1"></p>
@@ -156,16 +225,163 @@
 
   <div id="out" class="hidden"></div>
 
-  <footer data-i18n="footer"></footer>
+  <footer>
+    <span data-i18n="footer"></span>
+    <span>© 2026 ChinaTripCopilot.com · Powered by Real High-Speed Rail & TSP Routing Engine</span>
+  </footer>
+</div>
+
+<!-- $29 China Ready Concierge Checkout Modal -->
+<div class="modal-backdrop" id="conciergeModal" onclick="if(event.target===this)closeConciergeModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <strong style="font-size:16.5px;" id="modalTitle">Get the $29 China Ready Concierge Pack</strong>
+      <button class="ghost" style="padding:4px 10px;font-size:12px;" onclick="closeConciergeModal()">✕</button>
+    </div>
+    <p style="margin:0;font-size:13px;color:var(--muted);" id="modalDesc">
+      We will prepare your custom bilingual PDF handbook, Chinese taxi address cards, 12306 passport seat reservation links, and Alipay/eSIM setup guide for your exact route.
+    </p>
+    <label class="field">
+      <span>Your Email (for PDF + .ics delivery) *</span>
+      <input type="email" id="orderEmail" placeholder="you@example.com" required />
+    </label>
+    <label class="field">
+      <span>WhatsApp / Telegram (for 1-on-1 China Trip Support)</span>
+      <input type="text" id="orderWhatsapp" placeholder="+1 555 019 2834 / @username" />
+    </label>
+    <label class="field">
+      <span>Seat & Hotel Preferences (Optional)</span>
+      <input type="text" id="orderNotes" placeholder="e.g. 2 adults, window seats on G-trains, English-speaking hotels" />
+    </label>
+    <div id="orderMsg" style="font-size:12.5px;color:var(--ok);min-height:18px;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="ghost" onclick="closeConciergeModal()">Cancel</button>
+      <button class="cc-btn" style="padding:10px 20px;font-size:13.5px;" onclick="submitConciergeOrder()" id="orderSubmitBtn">
+        Continue to $29 Checkout →
+      </button>
+    </div>
+  </div>
 </div>
 
 <script>
-const state = { lang: "en", selected: [], cities: null, strings: {}, plan: null };
+const state = {
+  lang: "en",
+  selected: [],
+  cities: null,
+  strings: {},
+  plan: null,
+  conciergePrice: 29,
+  conciergeCheckoutUrl: ""
+};
+
+const SMART_ROUTE_TEMPLATES = [
+  {
+    badge: "240h Visa-Free #1",
+    en: "10-Day Golden Triangle: Beijing → Xi'an → Shanghai",
+    zh: "10日黄金三角：北京 → 西安 → 上海",
+    cities: ["beijing", "xian", "shanghai"],
+    days: 10,
+    pace: "balanced"
+  },
+  {
+    badge: "High-Speed Rail",
+    en: "7-Day Jiangnan Express: Shanghai → Suzhou → Hangzhou",
+    zh: "7日江南高铁线：上海 → 苏州 → 杭州",
+    cities: ["shanghai", "suzhou", "hangzhou"],
+    days: 7,
+    pace: "balanced"
+  },
+  {
+    badge: "Pandas & Karst",
+    en: "8-Day Southwest Wonder: Chengdu → Chongqing → Guilin",
+    zh: "8日熊猫山城桂林：成都 → 重庆 → 桂林",
+    cities: ["chengdu", "chongqing", "guilin"],
+    days: 8,
+    pace: "balanced"
+  },
+  {
+    badge: "Avatar Mountains",
+    en: "10-Day Epic Scenery: Beijing → Xi'an → Zhangjiajie → Shanghai",
+    zh: "10日奇峰古都：北京 → 西安 → 张家界 → 上海",
+    cities: ["beijing", "xian", "zhangjiajie", "shanghai"],
+    days: 10,
+    pace: "fast"
+  },
+  {
+    badge: "Greater Bay",
+    en: "5-Day Canton & Tech Hub: Hong Kong → Shenzhen → Guangzhou",
+    zh: "5日大湾区快线：香港 → 深圳 → 广州",
+    cities: ["hongkong", "shenzhen", "guangzhou"],
+    days: 5,
+    pace: "balanced"
+  },
+  {
+    badge: "Slow Travel",
+    en: "8-Day Yunnan Clouds: Kunming → Dali → Lijiang",
+    zh: "8日彩云之南慢游：昆明 → 大理 → 丽江",
+    cities: ["kunming", "dali", "lijiang"],
+    days: 8,
+    pace: "slow"
+  }
+];
 
 const $ = (id) => document.getElementById(id);
 const t = (key) => state.strings[key] || key;
 const cityName = (c) => (state.lang === "zh" ? c.zh : c.en);
 const cityAlt = (c) => (state.lang === "zh" ? c.en : c.zh);
+
+function renderRouteMarquee() {
+  const box = $("routeMarquee");
+  if (!box) return;
+  const renderItem = (tpl, idx) => `
+    <button class="route-pill" onclick="applyRouteTemplate(${idx})">
+      <span class="rp-badge">${tpl.badge}</span>
+      <span>${state.lang === "zh" ? tpl.zh : tpl.en}</span>
+    </button>
+  `;
+  const html = SMART_ROUTE_TEMPLATES.map(renderItem).join("");
+  box.innerHTML = html + html;
+}
+
+function initRouteMarqueeAutoScroll() {
+  const box = $("routeMarquee");
+  if (!box) return;
+  let paused = false;
+  let accum = 0;
+  box.addEventListener("mouseenter", () => { paused = true; });
+  box.addEventListener("mouseleave", () => { paused = false; });
+  box.addEventListener("touchstart", () => { paused = true; }, { passive: true });
+  box.addEventListener("touchend", () => { setTimeout(() => { paused = false; }, 2200); }, { passive: true });
+
+  function step() {
+    if (!paused && box.scrollWidth > box.clientWidth + 10) {
+      accum += 0.42;
+      if (accum >= 1) {
+        const d = Math.floor(accum);
+        accum -= d;
+        box.scrollLeft += d;
+        const half = box.scrollWidth / 2;
+        if (box.scrollLeft >= half) box.scrollLeft -= half;
+      }
+    }
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function applyRouteTemplate(idx) {
+  const tpl = SMART_ROUTE_TEMPLATES[idx];
+  if (!tpl || !state.cities) return;
+  const validCities = tpl.cities.filter((k) => state.cities.all.some((c) => c.key === k));
+  if (validCities.length >= 2) {
+    state.selected = validCities;
+  }
+  $("days").value = String(tpl.days || 7);
+  $("pace").value = tpl.pace || "balanced";
+  renderChips();
+  syncButton();
+  build();
+}
 
 function applyStrings() {
   document.querySelectorAll("[data-i18n]").forEach((el) => {
@@ -173,9 +389,12 @@ function applyStrings() {
     if (state.strings[key]) el.textContent = state.strings[key];
   });
   document.documentElement.lang = state.strings.html_lang || state.lang;
-  document.title = t("brand");
+  $("heroTitle").textContent = state.lang === "zh"
+    ? "ChinaTripCopilot — 外国人来华免签与高铁顺路行程规划"
+    : "ChinaTripCopilot — Smart China Rail & Visa-Free Trip Planner";
   $("lang-en").setAttribute("aria-pressed", state.lang === "en" ? "true" : "false");
   $("lang-zh").setAttribute("aria-pressed", state.lang === "zh" ? "true" : "false");
+  renderRouteMarquee();
 }
 
 function chip(city) {
@@ -224,6 +443,9 @@ async function loadCities() {
   const res = await fetch(`/api/inbound/cities?lang=${state.lang}`);
   state.cities = await res.json();
   state.strings = state.cities.strings || {};
+  state.conciergePrice = state.cities.concierge_price_usd || 29;
+  state.conciergeCheckoutUrl = state.cities.concierge_checkout_url || "";
+  $("tagConcierge").textContent = `$${state.conciergePrice} Full Concierge Pack Available`;
   applyStrings();
 
   const more = $("more");
@@ -242,7 +464,6 @@ async function loadCities() {
     syncButton();
   };
 
-  // First load: preselect the three most popular cities so the button is live.
   if (!state.selected.length) {
     state.selected = state.cities.popular.slice(0, 3).map((c) => c.key);
   }
@@ -282,9 +503,9 @@ function renderPlan(plan) {
     const mode = l.mode === "train"
       ? (state.lang === "zh" ? "高铁" : "Train")
       : (state.lang === "zh" ? "航班" : "Flight");
-    const book = l.booking_url
-      ? `<a class="book" href="${l.booking_url}" target="_blank" rel="nofollow sponsored">${t("book")}</a>`
-      : `<span class="d">—</span>`;
+    const fallbackUrl = l.mode === "train" ? "https://www.trip.com/trains/china/" : "https://www.trip.com/flights/";
+    const targetUrl = l.booking_url || fallbackUrl;
+    const book = `<a class="book" href="${targetUrl}" target="_blank" rel="nofollow sponsored">${t("book")}</a>`;
     return `<div class="leg">
       <div class="m">${mode}</div>
       <div>${l.from} → ${l.to}<small>${l.detail} · ${l.indicative ? t("estimated") : t("typ")}</small></div>
@@ -296,7 +517,8 @@ function renderPlan(plan) {
   const days = plan.days.map((d) => {
     const isNew = d.city !== lastCity;
     lastCity = d.city;
-    const hotel = isNew ? (plan.cities.find((c) => c.name === d.city) || {}).hotel_url : null;
+    const cityObj = plan.cities.find((c) => c.name === d.city) || {};
+    const hotel = isNew ? (cityObj.hotel_url || "https://www.trip.com/hotels/") : null;
     const items = d.items.map((i, idx, arr) => `
       <div class="item${idx === arr.length - 1 ? " last" : ""}">
         <div class="t">${i.time}</div>
@@ -316,7 +538,34 @@ function renderPlan(plan) {
     </div>`;
   }).join("");
 
-  const note = plan.affiliate_ready ? "" : `<div class="note">${t("no_booking_links")}</div>`;
+  const pUsd = state.conciergePrice || 29;
+  const conciergeHtml = state.lang === "zh" ? `
+    <div class="concierge-card">
+      <div class="cc-left">
+        <span class="cc-badge">PRO 定制服务 · $${pUsd} 美元/单</span>
+        <div class="cc-title">升级 $${pUsd} 来华无忧行程包 (China Ready Pack)</div>
+        <ul class="cc-list">
+          <li>12306 外籍护照实名认证与高铁选座代订指导</li>
+          <li>中英双语离线 PDF 路书 + 司机出示地址卡 + 手机日历 (.ics)</li>
+          <li>Alipay / WeChat Pay 外卡绑定清单与 WhatsApp 全程答疑</li>
+        </ul>
+      </div>
+      <button class="cc-btn" onclick="openConciergeModal()">获取 $${pUsd} 定制行程包 →</button>
+    </div>
+  ` : `
+    <div class="concierge-card">
+      <div class="cc-left">
+        <span class="cc-badge">CHINA READY CONCIERGE · $${pUsd} ONE-TIME</span>
+        <div class="cc-title">Need 12306 Seat Reservation & Bilingual Taxi Cards?</div>
+        <ul class="cc-list">
+          <li>12306 Foreign Passport High-Speed Train Seat Reservation Assistance</li>
+          <li>Custom Bilingual PDF + Show-to-Taxi-Driver Cards (Chinese Characters) + .ics</li>
+          <li>Alipay / WeChat Pay Foreign Visa/MasterCard Setup + 1-on-1 WhatsApp Support</li>
+        </ul>
+      </div>
+      <button class="cc-btn" onclick="openConciergeModal()">Get the $${pUsd} China Ready Pack →</button>
+    </div>
+  `;
 
   out.className = "result";
   out.classList.remove("hidden");
@@ -331,10 +580,11 @@ function renderPlan(plan) {
       </div>
       <p class="label" style="margin-top:16px">${t("getting_between")}</p>
       <div class="legs">${legs}</div>
-      <p class="label" style="margin-top:8px">${t("day_by_day")}</p>
+      ${conciergeHtml}
+      <p class="label" style="margin-top:18px">${t("day_by_day")}</p>
       ${days}
-      ${note}
       <div class="actions">
+        <button class="primary" onclick="openConciergeModal()">Get $${pUsd} Concierge Pack</button>
         <button class="ghost" id="pdf">${t("open_print")}</button>
         <button class="ghost" id="ics">${t("download_ics")}</button>
         <button class="ghost" id="adjust">${t("adjust")}</button>
@@ -354,6 +604,61 @@ function renderPlan(plan) {
   $("ics").onclick = () => downloadIcs(plan);
   $("adjust").onclick = () => $("builder").scrollIntoView({ behavior: "smooth", block: "start" });
   out.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function openConciergeModal() {
+  $("orderMsg").textContent = "";
+  $("modalTitle").textContent = `Get the $${state.conciergePrice || 29} China Ready Concierge Pack`;
+  $("orderSubmitBtn").textContent = `Continue to $${state.conciergePrice || 29} Checkout →`;
+  $("conciergeModal").classList.add("open");
+}
+
+function closeConciergeModal() {
+  $("conciergeModal").classList.remove("open");
+}
+
+async function submitConciergeOrder() {
+  const email = $("orderEmail").value.trim();
+  const whatsapp = $("orderWhatsapp").value.trim();
+  const notes = $("orderNotes").value.trim();
+  if (!email || !email.includes("@")) {
+    $("orderMsg").style.color = "#B91C1C";
+    $("orderMsg").textContent = "Please enter a valid email address.";
+    return;
+  }
+  const plan = state.plan || {};
+  const routeTitle = plan.title || state.selected.join(" → ");
+  $("orderMsg").style.color = "var(--ok)";
+  $("orderMsg").textContent = "Saving your itinerary & preparing checkout...";
+  try {
+    await fetch("/api/user/trips", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: `[$${state.conciergePrice} Pack] ${routeTitle}`,
+        from_city: state.selected[0] || "China",
+        to_city: state.selected[state.selected.length - 1] || "China",
+        travel_date: $("start").value || "",
+        days: Number($("days").value || 7),
+        summary: `Email: ${email} | WhatsApp: ${whatsapp || "-"} | Notes: ${notes || "-"}`,
+        itinerary_json: {
+          type: "concierge_pack_order",
+          price_usd: state.conciergePrice,
+          customer_email: email,
+          whatsapp,
+          notes,
+          cities: state.selected
+        }
+      })
+    });
+    if (state.conciergeCheckoutUrl) {
+      window.location.href = state.conciergeCheckoutUrl;
+      return;
+    }
+    $("orderMsg").textContent = "✅ Order received! Our concierge team has logged your itinerary and will send your payment link & bilingual pack to " + email + " shortly.";
+  } catch (e) {
+    $("orderMsg").textContent = "Saved locally. Please check your email shortly.";
+  }
 }
 
 async function downloadIcs(plan) {
@@ -411,6 +716,7 @@ const d = new Date();
 d.setDate(d.getDate() + 30);
 $("start").value = d.toISOString().slice(0, 10);
 $("go").textContent = t("build");
+initRouteMarqueeAutoScroll();
 loadCities();
 </script>
 </body>

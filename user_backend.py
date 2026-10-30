@@ -372,12 +372,15 @@ class UserAndAdminStore:
             cur_set = conn.execute("SELECT COUNT(*) AS cnt FROM travel_system_settings")
             if cur_set.fetchone()["cnt"] == 0:
                 settings = [
-                    ("marquee_auto_scroll", "true", "底部推荐提示词是否开启自动平滑滚动", now),
-                    ("marquee_speed_sec", "32", "底部推荐提示词滚动一轮秒数（越小越快）", now),
+                    ("custom_domain", "chinatripcopilot.com", "海外主品牌域名 (Cloudflare + Vercel)", now),
+                    ("concierge_price_usd", "29", "海外付费定制行程包价格 (USD $)", now),
+                    ("concierge_checkout_url", "", "LemonSqueezy / Creem / Stripe $29 收款链接 (留空则走内置意向单留资)", now),
+                    ("marquee_auto_scroll", "true", "底部/顶部推荐提示词是否开启自动平滑滚动", now),
+                    ("marquee_speed_sec", "32", "推荐提示词滚动一轮秒数（越小越快）", now),
                     ("recommendation_count", "8", "单次向前端下发的智能推荐提示词数量", now),
                     ("default_model", "deepseek-v4.1-flash", "默认对话与意图路由模型", now),
-                    ("trip_alliance_id", os.environ.get("TRIP_COM_ALLIANCEID", ""), "Trip.com 联盟 AllianceID", now),
-                    ("trip_sid", os.environ.get("TRIP_COM_SID", ""), "Trip.com 联盟 SID", now),
+                    ("trip_alliance_id", os.environ.get("TRIP_COM_ALLIANCEID", ""), "Trip.com 联盟 AllianceID (填入后自动激活全站分佣链接)", now),
+                    ("trip_sid", os.environ.get("TRIP_COM_SID", ""), "Trip.com 联盟 SID (填入后自动激活全站分佣链接)", now),
                     ("supabase_project_ref", "zxbajfsblpgtyljoxggv", "绑定的 Supabase 云项目 Ref", now),
                 ]
                 conn.executemany(
@@ -387,6 +390,19 @@ class UserAndAdminStore:
                     """,
                     settings,
                 )
+            else:
+                for extra_k, extra_v, extra_desc in [
+                    ("custom_domain", "chinatripcopilot.com", "海外主品牌域名 (Cloudflare + Vercel)"),
+                    ("concierge_price_usd", "29", "海外付费定制行程包价格 (USD $)"),
+                    ("concierge_checkout_url", "", "LemonSqueezy / Creem / Stripe $29 收款链接 (留空则走内置意向单留资)"),
+                ]:
+                    conn.execute(
+                        """
+                        INSERT OR IGNORE INTO travel_system_settings (key, value, description, updated_at)
+                        VALUES (?, ?, ?, ?)
+                        """,
+                        (extra_k, extra_v, extra_desc, now),
+                    )
 
             cur_logs = conn.execute("SELECT COUNT(*) AS cnt FROM travel_search_logs")
             if cur_logs.fetchone()["cnt"] == 0:
@@ -1353,6 +1369,10 @@ class UserAndAdminStore:
                     """,
                     (str(k), str(v), now),
                 )
+                if k == "trip_alliance_id" and str(v).strip():
+                    os.environ["TRIP_COM_ALLIANCEID"] = str(v).strip()
+                elif k == "trip_sid" and str(v).strip():
+                    os.environ["TRIP_COM_SID"] = str(v).strip()
                 self._async_sync_to_supabase(
                     "POST",
                     "travel_system_settings",
