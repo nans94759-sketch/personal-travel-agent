@@ -1646,45 +1646,288 @@
       gap: 10px;
     }
 
-    .quick-prompts {
+    .quick-prompts-bar {
       display: flex;
-      flex-wrap: wrap;
-      gap: 7px;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .quick-prompts {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      overflow-y: visible;
+      padding: 5px 6px 6px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      mask-image: linear-gradient(to right, transparent 0px, black 10px, black calc(100% - 14px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0px, black 10px, black calc(100% - 14px), transparent 100%);
+    }
+
+    .quick-prompts::-webkit-scrollbar {
+      display: none;
     }
 
     .qp-btn {
       font-family: var(--font-sans);
       font-size: 12px;
       font-weight: 500;
-      padding: 6px 12px;
+      padding: 6px 13px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.88);
+      background: rgba(255, 255, 255, 0.94);
       backdrop-filter: blur(8px);
-      border: 1px solid var(--border-strong);
+      border: 1px solid rgba(21, 22, 26, 0.14);
       color: var(--text-secondary);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      box-shadow: 0 2px 6px rgba(21, 22, 26, 0.03);
-      transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+      flex-shrink: 0;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(21, 22, 26, 0.04);
+      transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.2s;
     }
 
     .qp-btn .lucide {
       width: 13.5px;
       height: 13.5px;
       color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .qp-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      letter-spacing: 0.01em;
     }
 
     .qp-btn:hover {
       background: var(--obsidian);
       border-color: var(--obsidian);
       color: #FFFFFF;
-      transform: translateY(-1.5px);
+      transform: translateY(-1px);
     }
 
     .qp-btn:hover .lucide {
       color: #FFFFFF;
+    }
+
+    .qp-btn:hover .qp-badge {
+      background: rgba(255, 255, 255, 0.18);
+      color: #FDBA74;
+    }
+
+    .qp-refresh-btn {
+      flex-shrink: 0;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px dashed var(--border-strong);
+      background: rgba(255, 255, 255, 0.85);
+      color: var(--text-secondary);
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      transition: all 0.18s;
+    }
+
+    .qp-refresh-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #fff;
+    }
+
+    .qp-refresh-btn .lucide {
+      width: 12.5px;
+      height: 12.5px;
+    }
+
+    /* User Center & Profile Modal */
+    .user-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(21, 22, 26, 0.48);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .user-modal-overlay.open {
+      display: flex;
+    }
+
+    .user-modal-card {
+      width: 100%;
+      max-width: 560px;
+      max-height: 88dvh;
+      overflow-y: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border-strong);
+      border-radius: 22px;
+      box-shadow: 0 24px 60px rgba(21, 22, 26, 0.22);
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .um-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .um-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .um-tabs {
+      display: flex;
+      gap: 6px;
+      background: var(--bg-subtle);
+      padding: 4px;
+      border-radius: 12px;
+    }
+
+    .um-tab {
+      flex: 1;
+      text-align: center;
+      padding: 7px 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      border-radius: 9px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.16s;
+    }
+
+    .um-tab.active {
+      background: #fff;
+      color: var(--text-primary);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    }
+
+    .um-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .um-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .um-field.full {
+      grid-column: 1 / -1;
+    }
+
+    .um-field label {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .um-input, .um-select {
+      padding: 8px 11px;
+      border-radius: 10px;
+      border: 1px solid var(--border-strong);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      background: #fff;
+      color: var(--text-primary);
+      outline: none;
+    }
+
+    .um-input:focus, .um-select:focus {
+      border-color: var(--accent);
+    }
+
+    .um-demo-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .um-demo-pill {
+      font-size: 11.5px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-subtle);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .um-demo-pill:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .um-btn-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 6px;
+    }
+
+    .um-primary-btn {
+      background: var(--obsidian);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .um-primary-btn:hover {
+      background: var(--accent);
+    }
+
+    .um-list-item {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12.5px;
     }
 
     .input-box {
@@ -1927,9 +2170,18 @@
       .quick-prompts {
         flex-wrap: nowrap;
         overflow-x: auto;
+        overflow-y: visible;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
-        padding-bottom: 2px;
+        padding: 5px 4px 6px;
+      }
+
+      .um-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .user-modal-card {
+        padding: 16px 14px;
       }
 
       .quick-prompts::-webkit-scrollbar {
@@ -2002,6 +2254,16 @@
           <option value="deepseek-v4.1-flash">极速回答</option>
           <option value="deepseek-v4-pro-0813">深度规划</option>
         </select>
+
+        <button class="pill-tool-btn" id="userCenterBtn" onclick="openUserModal()" title="个人出行画像与行程中心">
+          <i data-lucide="user-check"></i>
+          <span id="headerUserLabel">登录 / 画像</span>
+        </button>
+
+        <a href="/admin" class="btn-minimal" title="进入管理后台" style="text-decoration:none;">
+          <i data-lucide="layout-dashboard"></i>
+          <span>后台</span>
+        </a>
 
         <button class="btn-minimal" onclick="clearConversation()">
           <i data-lucide="rotate-ccw"></i>
@@ -2119,26 +2381,13 @@
   <!-- Obsidian Floating Input Dock -->
   <footer class="input-dock" id="bottomDock">
     <div class="input-dock-inner">
-      <div class="quick-prompts" id="quickPrompts">
-        <button class="qp-btn" onclick="sendPrompt('周天杭州去河内有什么航班？')">
-          <i data-lucide="git-branch"></i>
-          <span>周日杭州去河内（含空铁中转）</span>
-        </button>
-        <button class="qp-btn" onclick="sendPrompt('本周日玉山到上海有哪些高铁？')">
-          <i data-lucide="train-front"></i>
-          <span>周日玉山去上海高铁</span>
-        </button>
-        <button class="qp-btn" onclick="sendPrompt('明天北京到上海对比下高铁和机票哪个划算')">
-          <i data-lucide="scale"></i>
-          <span>明天京沪高铁 vs 机票</span>
-        </button>
-        <button class="qp-btn" onclick="sendPrompt('河内，机场旁边，酒店价格，下周一')">
-          <i data-lucide="building-2"></i>
-          <span>下周一河内机场旁酒店</span>
-        </button>
-        <button class="qp-btn" onclick="sendPrompt('下周一去河内，推荐高分酒店和必去景点门票，并规划顺路游览路线')">
-          <i data-lucide="compass"></i>
-          <span>河内酒店+景点智能画路线</span>
+      <div class="quick-prompts-bar">
+        <div class="quick-prompts" id="quickPrompts">
+          <!-- Dynamically populated by /api/recommendations based on user profile & session context -->
+        </div>
+        <button class="qp-refresh-btn" onclick="refreshRecommendations(true)" title="根据你的出行画像换一批智能推荐">
+          <i data-lucide="refresh-cw" id="qpRefreshIcon"></i>
+          <span>换一批</span>
         </button>
       </div>
       <div class="input-box">
@@ -2151,6 +2400,135 @@
       </div>
     </div>
   </footer>
+
+  <!-- User Center, Personal Travel Persona & Saved Trips Modal -->
+  <div class="user-modal-overlay" id="userModalOverlay" onclick="if(event.target===this)closeUserModal()">
+    <div class="user-modal-card" onclick="event.stopPropagation()">
+      <div class="um-header">
+        <div class="um-title">
+          <i data-lucide="user-circle" style="color:var(--accent);width:20px;height:20px;"></i>
+          <span id="umHeaderTitle">用户中心 & 智能出行画像</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <a href="/admin" class="fx-mini-btn primary" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+            <i data-lucide="shield-check" style="width:12px;height:12px;"></i> 管理后台
+          </a>
+          <button class="fx-mini-btn" onclick="closeUserModal()">关闭</button>
+        </div>
+      </div>
+
+      <div class="um-tabs">
+        <button class="um-tab active" id="umTabBtnProfile" onclick="switchUserTab('profile')">出行画像与账号</button>
+        <button class="um-tab" id="umTabBtnTrips" onclick="switchUserTab('trips')">收藏行程 (<span id="umTripsCount">0</span>)</button>
+        <button class="um-tab" id="umTabBtnHistory" onclick="switchUserTab('history')">常查记录 (<span id="umHistoryCount">0</span>)</button>
+      </div>
+
+      <!-- Tab 1: Auth & Persona Profile -->
+      <div id="umPaneProfile" style="display:flex;flex-direction:column;gap:12px;">
+        <!-- Quick Demo Switcher -->
+        <div style="background:var(--bg-subtle);padding:10px 12px;border-radius:12px;border:1px dashed var(--border-strong);">
+          <div style="font-size:11.5px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;">
+            ⚡ 一键切换不同画像账号（测试底部提示词随用户画像实时动态变化）：
+          </div>
+          <div class="um-demo-pills">
+            <button class="um-demo-pill" onclick="quickDemoLogin('admin@travel.ai','admin123456')">👑 总控管理员 (常驻: 杭州 · 空铁联运)</button>
+            <button class="um-demo-pill" onclick="quickDemoLogin('vip@travel.ai','vip123456')">✈️ 林远行 VIP (常驻: 上海 · 跨境五星)</button>
+            <button class="um-demo-pill" onclick="quickDemoLogin('demo@travel.ai','demo123456')">🚄 苏小游 (常驻: 北京 · 高铁特种兵)</button>
+          </div>
+        </div>
+
+        <!-- Logged-Out Login / Register Form -->
+        <div id="umAuthBox" style="display:flex;flex-direction:column;gap:10px;">
+          <div class="um-grid">
+            <div class="um-field">
+              <label>邮箱账号</label>
+              <input type="email" id="umAuthEmail" class="um-input" placeholder="如 vip@travel.ai" value="vip@travel.ai" />
+            </div>
+            <div class="um-field">
+              <label>登录密码</label>
+              <input type="password" id="umAuthPassword" class="um-input" placeholder="至少 6 位密码" value="vip123456" />
+            </div>
+            <div class="um-field">
+              <label>昵称（注册时选填）</label>
+              <input type="text" id="umAuthNickname" class="um-input" placeholder="如：陈大航" />
+            </div>
+            <div class="um-field">
+              <label>常驻出发城市（用于智能推荐）</label>
+              <input type="text" id="umAuthHomeCity" class="um-input" placeholder="如：杭州 / 上海 / 深圳" value="杭州" />
+            </div>
+          </div>
+          <div id="umAuthMsg" style="font-size:12px;color:var(--accent);min-height:16px;"></div>
+          <div class="um-btn-row">
+            <button class="um-primary-btn" onclick="handleLoginSubmit()">
+              <i data-lucide="log-in" style="width:14px;height:14px;"></i> 登录账号
+            </button>
+            <button class="fx-mini-btn" style="padding:8px 14px;font-size:12.5px;" onclick="handleRegisterSubmit()">
+              注册新账号并生成专属推荐
+            </button>
+          </div>
+        </div>
+
+        <!-- Logged-In Persona Editor -->
+        <div id="umProfileEditor" style="display:none;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--accent-soft);padding:9px 12px;border-radius:11px;">
+            <div style="font-size:12.5px;font-weight:600;color:var(--accent);" id="umCurrentStatusText">已登录</div>
+            <button class="fx-mini-btn" onclick="handleLogout()">退出登录</button>
+          </div>
+          <div class="um-grid">
+            <div class="um-field">
+              <label>用户昵称</label>
+              <input type="text" id="umProfNickname" class="um-input" />
+            </div>
+            <div class="um-field">
+              <label>常驻出发城市（决定推荐起点）</label>
+              <input type="text" id="umProfHomeCity" class="um-input" placeholder="如：杭州、上海、深圳、成都" />
+            </div>
+            <div class="um-field">
+              <label>出行交通偏好</label>
+              <select id="umProfTransport" class="um-select">
+                <option value="all">综合比价（高铁 + 机票 + 空铁联运）</option>
+                <option value="train">高铁 / 动车优先</option>
+                <option value="flight">机票直飞优先</option>
+                <option value="transfer">空铁联运 / 枢纽换乘优先</option>
+              </select>
+            </div>
+            <div class="um-field">
+              <label>酒店住宿档位</label>
+              <select id="umProfHotelBudget" class="um-select">
+                <option value="economy">经济型 · 地铁旁高性价比</option>
+                <option value="comfort">舒适型 · 核心商圈高分酒店</option>
+                <option value="luxury">豪华型 · 五星地标 / 机场旁奢华</option>
+              </select>
+            </div>
+            <div class="um-field">
+              <label>常去目的地（逗号分隔，用于动态推荐）</label>
+              <input type="text" id="umProfFreqDests" class="um-input" placeholder="上海, 北京, 河内, 东京" />
+            </div>
+            <div class="um-field">
+              <label>个人出行标签（逗号分隔）</label>
+              <input type="text" id="umProfTags" class="um-input" placeholder="高铁控, 东南亚出差, 顺路游览" />
+            </div>
+          </div>
+          <div id="umProfSaveMsg" style="font-size:12px;color:var(--green);min-height:16px;"></div>
+          <div class="um-btn-row">
+            <button class="um-primary-btn" onclick="handleSaveUserProfile()">
+              <i data-lucide="sparkles" style="width:14px;height:14px;"></i> 保存画像并立即刷新底部推荐词
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Saved Trips -->
+      <div id="umPaneTrips" style="display:none;flex-direction:column;gap:8px;">
+        <div id="umTripsList" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <!-- Tab 3: Search History -->
+      <div id="umPaneHistory" style="display:none;flex-direction:column;gap:8px;">
+        <div id="umHistoryList" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+    </div>
+  </div>
 
   <script>
     // Supported Currencies for 1-click conversion
@@ -4720,10 +5098,14 @@
         if (toolData.follow_ups && toolData.follow_ups.length) {
           const fBox = document.getElementById(`followups-${turnId}`);
           fBox.style.display = 'flex';
-          fBox.innerHTML = toolData.follow_ups.map(q =>
+          const saveBtnHtml = `<button class="followup-chip" style="border-color:var(--accent);color:var(--accent);background:var(--accent-soft);" onclick="saveTurnAsTrip(${turnId})"><i data-lucide="bookmark-plus" style="width:12.5px;height:12.5px;"></i> <span>收藏此行程</span></button>`;
+          fBox.innerHTML = saveBtnHtml + toolData.follow_ups.map(q =>
             `<button class="followup-chip" onclick="sendPrompt('${q.replace(/'/g, "\\'")}')"><i data-lucide="message-square-plus" style="width:12.5px;height:12.5px;"></i> <span>${q}</span></button>`
           ).join('');
         }
+
+        // Refresh bottom scrolling recommendations based on latest trip context & user profile
+        refreshRecommendations(false);
 
         refreshIcons();
         if (window.gsap) {
@@ -4746,6 +5128,375 @@
         handleSend();
       }
     });
+
+    // =========================================================================
+    // Smart Scrolling Personalized Recommendations & User Profile System
+    // =========================================================================
+    let currentUser = null;
+    let userSavedTrips = [];
+    let userSearchHistory = [];
+    let recommendationSeed = 0;
+    let qpAutoScrollEnabled = true;
+    let qpScrollPaused = false;
+    let qpRafId = null;
+    let qpScrollAccum = 0;
+
+    function initQuickPromptsAutoScroll() {
+      const box = document.getElementById('quickPrompts');
+      if (!box) return;
+      box.addEventListener('mouseenter', () => { qpScrollPaused = true; });
+      box.addEventListener('mouseleave', () => { qpScrollPaused = false; });
+      box.addEventListener('touchstart', () => { qpScrollPaused = true; }, { passive: true });
+      box.addEventListener('touchend', () => {
+        setTimeout(() => { qpScrollPaused = false; }, 2200);
+      }, { passive: true });
+
+      function step() {
+        if (qpAutoScrollEnabled && !qpScrollPaused && box.scrollWidth > box.clientWidth + 12) {
+          qpScrollAccum += 0.45;
+          if (qpScrollAccum >= 1) {
+            const delta = Math.floor(qpScrollAccum);
+            qpScrollAccum -= delta;
+            box.scrollLeft += delta;
+            // Seamless loop when reaching the duplicated half or end
+            const halfWidth = box.scrollWidth / 2;
+            if (box.dataset.looped === '1' && box.scrollLeft >= halfWidth) {
+              box.scrollLeft -= halfWidth;
+            } else if (box.scrollLeft + box.clientWidth >= box.scrollWidth - 2) {
+              box.scrollLeft = 0;
+            }
+          }
+        }
+        qpRafId = requestAnimationFrame(step);
+      }
+      if (qpRafId) cancelAnimationFrame(qpRafId);
+      qpRafId = requestAnimationFrame(step);
+    }
+
+    async function onQuickPromptClick(id, promptText) {
+      if (id) {
+        fetch('/api/recommendations/click', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        }).catch(() => {});
+      }
+      sendPrompt(promptText);
+    }
+
+    async function refreshRecommendations(incrementSeed = false) {
+      if (incrementSeed) {
+        recommendationSeed += 1;
+        const icon = document.getElementById('qpRefreshIcon');
+        if (icon) {
+          icon.classList.add('spin-icon');
+          setTimeout(() => icon.classList.remove('spin-icon'), 500);
+        }
+      }
+      try {
+        const params = new URLSearchParams({
+          from_city: sessionContext.from_city || (currentUser && currentUser.home_city) || '',
+          to_city: sessionContext.to_city || '',
+          date: sessionContext.date || '',
+          currency: activeCurrency || 'CNY',
+          seed: String(recommendationSeed)
+        });
+        const resp = await fetch(`/api/recommendations?${params.toString()}`);
+        const data = await resp.json();
+        if (!data || !data.ok) return;
+
+        if (data.marquee) {
+          qpAutoScrollEnabled = Boolean(data.marquee.auto_scroll);
+        }
+        const recs = data.recommendations || [];
+        const box = document.getElementById('quickPrompts');
+        if (!box) return;
+
+        const renderChip = (item) => {
+          const safePrompt = (item.prompt || item.title || '').replace(/'/g, "\\'");
+          const badgeHtml = item.badge ? `<span class="qp-badge">${escapeHtml(item.badge)}</span>` : '';
+          return `
+            <button class="qp-btn" onclick="onQuickPromptClick('${escapeHtml(item.id || '')}', '${safePrompt}')">
+              <i data-lucide="${escapeHtml(item.icon || 'sparkles')}"></i>
+              ${badgeHtml}
+              <span>${escapeHtml(item.title || '')}</span>
+            </button>
+          `;
+        };
+
+        // Duplicate items for seamless infinite marquee scrolling when >= 4 items
+        const baseHtml = recs.map(renderChip).join('');
+        if (recs.length >= 4) {
+          box.innerHTML = baseHtml + baseHtml;
+          box.dataset.looped = '1';
+        } else {
+          box.innerHTML = baseHtml;
+          box.dataset.looped = '0';
+        }
+        refreshIcons();
+      } catch (e) {
+        console.warn('refreshRecommendations error:', e);
+      }
+    }
+
+    async function loadCurrentUser() {
+      try {
+        const resp = await fetch('/api/auth/me');
+        const data = await resp.json();
+        if (data && data.authenticated && data.user) {
+          currentUser = data.user;
+          userSavedTrips = data.saved_trips || [];
+          userSearchHistory = data.history || [];
+          if (currentUser.preferred_currency && fxRates[currentUser.preferred_currency]) {
+            activeCurrency = currentUser.preferred_currency;
+            renderCurrencyGrid();
+          }
+          if (!sessionContext.from_city && currentUser.home_city) {
+            sessionContext.from_city = currentUser.home_city;
+          }
+        } else {
+          currentUser = null;
+          userSavedTrips = [];
+          userSearchHistory = [];
+        }
+        syncUserUI();
+        await refreshRecommendations(false);
+      } catch (e) {
+        console.warn('loadCurrentUser error:', e);
+      }
+    }
+
+    function syncUserUI() {
+      const lbl = document.getElementById('headerUserLabel');
+      const authBox = document.getElementById('umAuthBox');
+      const profEditor = document.getElementById('umProfileEditor');
+      const statusText = document.getElementById('umCurrentStatusText');
+      const tripsCount = document.getElementById('umTripsCount');
+      const histCount = document.getElementById('umHistoryCount');
+
+      if (tripsCount) tripsCount.textContent = String(userSavedTrips.length);
+      if (histCount) histCount.textContent = String(userSearchHistory.length);
+
+      if (currentUser) {
+        if (lbl) lbl.textContent = `${currentUser.nickname} · 📍${currentUser.home_city || '杭州'}`;
+        if (authBox) authBox.style.display = 'none';
+        if (profEditor) profEditor.style.display = 'flex';
+        if (statusText) {
+          const roleMap = { admin: '总控管理员', vip: 'VIP 会员', user: '正式会员' };
+          statusText.textContent = `当前账号：${currentUser.email}（${roleMap[currentUser.role] || '会员'} · 常驻 ${currentUser.home_city}）`;
+        }
+        document.getElementById('umProfNickname').value = currentUser.nickname || '';
+        document.getElementById('umProfHomeCity').value = currentUser.home_city || '杭州';
+        document.getElementById('umProfTransport').value = currentUser.preferred_transport || 'all';
+        document.getElementById('umProfHotelBudget').value = currentUser.hotel_budget || 'comfort';
+        document.getElementById('umProfFreqDests').value = (currentUser.frequent_destinations || []).join(', ');
+        document.getElementById('umProfTags').value = (currentUser.travel_tags || []).join(', ');
+      } else {
+        if (lbl) lbl.textContent = '登录 / 画像';
+        if (authBox) authBox.style.display = 'flex';
+        if (profEditor) profEditor.style.display = 'none';
+      }
+      renderUserTripsAndHistory();
+    }
+
+    function renderUserTripsAndHistory() {
+      const tripsBox = document.getElementById('umTripsList');
+      if (tripsBox) {
+        if (!userSavedTrips.length) {
+          tripsBox.innerHTML = `<div style="font-size:12.5px;color:var(--text-muted);padding:16px;text-align:center;">暂无收藏行程。在对话卡片下方点击「收藏此行程」即可保存。</div>`;
+        } else {
+          tripsBox.innerHTML = userSavedTrips.map(t => `
+            <div class="um-list-item">
+              <div style="display:flex;flex-direction:column;gap:2px;">
+                <strong>${escapeHtml(t.title)}</strong>
+                <span style="font-size:11.5px;color:var(--text-secondary);">${escapeHtml(t.from_city || '')} ➔ ${escapeHtml(t.to_city || '')} · ${escapeHtml(t.travel_date || '近期')}</span>
+                <span style="font-size:11px;color:var(--text-muted);">${escapeHtml(t.summary || '')}</span>
+              </div>
+              <div style="display:flex;gap:6px;flex-shrink:0;">
+                <button class="fx-mini-btn primary" onclick="closeUserModal();sendPrompt('${escapeHtml((t.travel_date || '明天') + (t.from_city || '') + '去' + t.to_city + '行程与车票')}')">再次查询</button>
+                <button class="fx-mini-btn" onclick="deleteSavedTrip('${escapeHtml(t.id)}')">删除</button>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+
+      const histBox = document.getElementById('umHistoryList');
+      if (histBox) {
+        if (!userSearchHistory.length) {
+          histBox.innerHTML = `<div style="font-size:12.5px;color:var(--text-muted);padding:16px;text-align:center;">暂无历史搜索记录。</div>`;
+        } else {
+          histBox.innerHTML = userSearchHistory.map(h => `
+            <div class="um-list-item">
+              <div style="display:flex;flex-direction:column;gap:2px;">
+                <strong>${escapeHtml(h.query_text)}</strong>
+                <span style="font-size:11px;color:var(--text-muted);">路线：${escapeHtml(h.from_city || '-')} ➔ ${escapeHtml(h.to_city || '-')} · 耗时 ${h.latency_ms || 0}ms</span>
+              </div>
+              <button class="fx-mini-btn primary" onclick="closeUserModal();sendPrompt('${escapeHtml(h.query_text.replace(/'/g, "\\'"))}')">复查</button>
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    function openUserModal() {
+      document.getElementById('userModalOverlay').classList.add('open');
+      loadCurrentUser();
+    }
+
+    function closeUserModal() {
+      document.getElementById('userModalOverlay').classList.remove('open');
+    }
+
+    function switchUserTab(tab) {
+      document.getElementById('umTabBtnProfile').classList.toggle('active', tab === 'profile');
+      document.getElementById('umTabBtnTrips').classList.toggle('active', tab === 'trips');
+      document.getElementById('umTabBtnHistory').classList.toggle('active', tab === 'history');
+      document.getElementById('umPaneProfile').style.display = tab === 'profile' ? 'flex' : 'none';
+      document.getElementById('umPaneTrips').style.display = tab === 'trips' ? 'flex' : 'none';
+      document.getElementById('umPaneHistory').style.display = tab === 'history' ? 'flex' : 'none';
+    }
+
+    async function quickDemoLogin(email, password) {
+      document.getElementById('umAuthEmail').value = email;
+      document.getElementById('umAuthPassword').value = password;
+      await handleLoginSubmit();
+    }
+
+    async function handleLoginSubmit() {
+      const email = document.getElementById('umAuthEmail').value.trim();
+      const password = document.getElementById('umAuthPassword').value.trim();
+      const msgBox = document.getElementById('umAuthMsg');
+      msgBox.textContent = '正在登录并同步画像...';
+      try {
+        const resp = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await resp.json();
+        if (!data.ok) {
+          msgBox.textContent = data.error || '登录失败';
+          return;
+        }
+        msgBox.textContent = '';
+        await loadCurrentUser();
+      } catch (e) {
+        msgBox.textContent = '网络请求异常';
+      }
+    }
+
+    async function handleRegisterSubmit() {
+      const email = document.getElementById('umAuthEmail').value.trim();
+      const password = document.getElementById('umAuthPassword').value.trim();
+      const nickname = document.getElementById('umAuthNickname').value.trim();
+      const home_city = document.getElementById('umAuthHomeCity').value.trim() || '杭州';
+      const msgBox = document.getElementById('umAuthMsg');
+      msgBox.textContent = '正在创建账号...';
+      try {
+        const resp = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, nickname, home_city })
+        });
+        const data = await resp.json();
+        if (!data.ok) {
+          msgBox.textContent = data.error || '注册失败';
+          return;
+        }
+        msgBox.textContent = '';
+        await loadCurrentUser();
+      } catch (e) {
+        msgBox.textContent = '注册请求异常';
+      }
+    }
+
+    async function handleSaveUserProfile() {
+      const saveMsg = document.getElementById('umProfSaveMsg');
+      saveMsg.textContent = '正在保存画像...';
+      const payload = {
+        nickname: document.getElementById('umProfNickname').value.trim(),
+        home_city: document.getElementById('umProfHomeCity').value.trim() || '杭州',
+        preferred_transport: document.getElementById('umProfTransport').value,
+        hotel_budget: document.getElementById('umProfHotelBudget').value,
+        frequent_destinations: document.getElementById('umProfFreqDests').value,
+        travel_tags: document.getElementById('umProfTags').value
+      };
+      try {
+        const resp = await fetch('/api/user/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (data.ok && data.user) {
+          currentUser = data.user;
+          sessionContext.from_city = currentUser.home_city;
+          syncUserUI();
+          await refreshRecommendations(false);
+          saveMsg.textContent = '✅ 画像已保存，底部滚动推荐词已根据你的新画像实时更新！';
+          setTimeout(() => { saveMsg.textContent = ''; }, 3500);
+        }
+      } catch (e) {
+        saveMsg.textContent = '保存失败，请重试';
+      }
+    }
+
+    async function handleLogout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      currentUser = null;
+      userSavedTrips = [];
+      userSearchHistory = [];
+      syncUserUI();
+      await refreshRecommendations(false);
+    }
+
+    async function saveTurnAsTrip(turnId) {
+      const store = turnStore[turnId];
+      if (!store) return;
+      const intent = store.intent || {};
+      const fromCity = intent.from_city || (currentUser && currentUser.home_city) || '出发地';
+      const toCity = intent.to_city || intent.hotel_city || intent.attraction_city || '目的地';
+      const dateStr = intent.date || '近期';
+      const title = `${fromCity} ➔ ${toCity} 智能行程方案 (${dateStr})`;
+      const summary = (store.rawReplyText || '').slice(0, 140).replace(/\n+/g, ' ');
+      try {
+        const resp = await fetch('/api/user/trips', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            from_city: fromCity,
+            to_city: toCity,
+            travel_date: dateStr,
+            days: intent.days || 3,
+            summary,
+            itinerary_json: {
+              trains: (store.trains || []).length,
+              flights: (store.flights || []).length,
+              hotels: (store.hotels || []).length
+            }
+          })
+        });
+        const data = await resp.json();
+        if (data.ok) {
+          await loadCurrentUser();
+          openUserModal();
+          switchUserTab('trips');
+        }
+      } catch (e) {
+        console.warn('saveTurnAsTrip error:', e);
+      }
+    }
+
+    async function deleteSavedTrip(tripId) {
+      await fetch(`/api/user/trips/${tripId}`, { method: 'DELETE' });
+      await loadCurrentUser();
+    }
+
+    // Initialize user session & scrolling recommendations on startup
+    initQuickPromptsAutoScroll();
+    loadCurrentUser();
   </script>
 </body>
 </html>

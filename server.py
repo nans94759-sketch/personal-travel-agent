@@ -14,6 +14,7 @@ import asyncio
 import concurrent.futures
 import logging
 import os
+import time
 from typing import Any, Dict, List
 
 from aiohttp import web
@@ -35,6 +36,7 @@ from provider_global_transit import (
 )
 from provider_hotels import HotelScraperClient
 from provider_map import SmartRouteMapEngine
+from user_backend import UserAndAdminStore, get_current_user, setup_user_and_admin_routes
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -50,6 +52,7 @@ hotel_client = HotelScraperClient()
 attraction_client = GlobalAttractionClient()
 transit_client = GlobalTransitClient()
 map_engine = SmartRouteMapEngine()
+user_store = UserAndAdminStore(BASE_DIR)
 
 
 async def handle_index(request: web.Request) -> web.FileResponse:
@@ -88,7 +91,12 @@ async def handle_chat_tools(request: web.Request) -> web.Response:
     context = body.get("context") or {}
     if not isinstance(context, dict):
         context = {}
+    current_user = get_current_user(request, user_store)
+    if current_user and not context.get("lastFromCity") and current_user.get("home_city"):
+        context = dict(context)
+        context["lastFromCity"] = current_user["home_city"]
     preferred_model = (body.get("model") or "deepseek-v4.1-flash").strip()
+    t0 = time.monotonic()
 
     loop = asyncio.get_running_loop()
     intent = await loop.run_in_executor(
@@ -96,6 +104,9 @@ async def handle_chat_tools(request: web.Request) -> web.Response:
     )
     from_city = intent.get("from_city", "")
     to_city = intent.get("to_city", "")
+    if not from_city and to_city and current_user and current_user.get("home_city") and current_user["home_city"] != to_city:
+        from_city = current_user["home_city"]
+        intent["from_city"] = from_city
     hotel_city = intent.get("hotel_city", "")
     attraction_city = intent.get("attraction_city", "") or to_city or hotel_city
     date_str = intent.get("date", "")
@@ -441,6 +452,34 @@ async def handle_chat_tools(request: web.Request) -> web.Response:
     if from_city and to_city:
         follow_ups.append(f"后天{from_city}去{to_city}呢")
 
+    elapsed_ms = int((time.monotonic() - t0) * 1000)
+    intent_type = (
+        "hotel"
+        if only_hotel
+        else "attraction"
+        if only_attraction
+        else "route"
+        if has_route
+        else "single_city"
+    )
+    try:
+        user_store.record_search_log(
+            user=current_user,
+            query_text=message,
+            from_city=from_city,
+            to_city=to_city or hotel_city or attraction_city,
+            travel_date=date_str,
+            intent_type=intent_type,
+            mode=os.environ.get("TRAVEL_DATA_MODE", "personal"),
+            trains_count=len(trains) + len(euro_trains),
+            flights_count=len(flights),
+            hotels_count=len(hotels),
+            attractions_count=len(attractions),
+            latency_ms=elapsed_ms,
+        )
+    except Exception as exc:
+        logger.debug("search log write error: %s", exc)
+
     return web.json_response(
         {
             "ok": True,
@@ -708,6 +747,7 @@ def create_app() -> web.Application:
     app.router.add_get("/api/transfers", handle_transfers)
     app.router.add_post("/api/map/route", handle_map_route)
     app.router.add_post("/api/export/ics", handle_export_ics)
+    setup_user_and_admin_routes(app, user_store, STATIC_DIR)
     if os.path.exists(STATIC_DIR):
         app.router.add_static("/static", STATIC_DIR)
     return app

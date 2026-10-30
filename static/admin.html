@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>远行客 · 智能运营与用户管理后台</title>
+  <script src="/static/vendor/lucide.min.js"></script>
+  <style>
+    :root {
+      --bg-page: #F7F4EF;
+      --bg-card: #FFFFFF;
+      --bg-subtle: #F1ECE4;
+      --obsidian: #15161A;
+      --text-primary: #15161A;
+      --text-secondary: #5A5D65;
+      --text-muted: #8C8F98;
+      --accent: #EA580C;
+      --accent-soft: #FFF0E6;
+      --green: #0F766E;
+      --green-soft: #E6F6F4;
+      --border: rgba(21, 22, 26, 0.09);
+      --border-strong: rgba(21, 22, 26, 0.16);
+      --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Inter", sans-serif;
+      --font-mono: "JetBrains Mono", "SFMono-Regular", monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-page);
+      color: var(--text-primary);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .topbar-inner {
+      max-width: 1320px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--obsidian);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cloud-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: var(--green);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      font-family: var(--font-sans);
+      font-size: 12.5px;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: #fff;
+      color: var(--text-primary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: all 0.16s;
+    }
+
+    .btn:hover {
+      border-color: var(--obsidian);
+      background: var(--bg-subtle);
+    }
+
+    .btn.primary {
+      background: var(--obsidian);
+      color: #fff;
+      border-color: var(--obsidian);
+    }
+
+    .btn.primary:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .btn.accent {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .btn.sm {
+      padding: 4px 10px;
+      font-size: 11.5px;
+    }
+
+    .layout {
+      max-width: 1320px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 24px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      box-shadow: 0 4px 16px rgba(21, 22, 26, 0.03);
+    }
+
+    .kpi-lbl {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .kpi-val {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+
+    .nav-tabs::-webkit-scrollbar { display: none; }
+
+    .nav-tab {
+      padding: 9px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: rgba(255, 255, 255, 0.75);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.16s;
+    }
+
+    .nav-tab.active {
+      background: var(--obsidian);
+      color: #fff;
+      border-color: var(--obsidian);
+    }
+
+    .panel {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel.active {
+      display: flex;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px 20px;
+      box-shadow: 0 6px 20px rgba(21, 22, 26, 0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .card-hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    th {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+      background: var(--bg-subtle);
+      white-space: nowrap;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--bg-subtle);
+      color: var(--text-secondary);
+      margin: 1px 2px;
+    }
+
+    .tag.admin { background: #FEE2E2; color: #B91C1C; }
+    .tag.vip { background: var(--accent-soft); color: var(--accent); }
+    .tag.user { background: var(--green-soft); color: var(--green); }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      background: var(--bg-subtle);
+      padding: 14px;
+      border-radius: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .field label {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .input, .select {
+      padding: 8px 11px;
+      border-radius: 9px;
+      border: 1px solid var(--border-strong);
+      background: #fff;
+      font-size: 12.5px;
+      font-family: var(--font-sans);
+      outline: none;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 960px) {
+      .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+      .form-grid { grid-template-columns: 1fr 1fr; }
+      .two-col { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .topbar { padding: 10px 14px; }
+      .layout { padding: 14px 12px 36px; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .form-grid { grid-template-columns: 1fr; }
+      .card { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-badge"><i data-lucide="compass" style="width:18px;height:18px;"></i></div>
+        <div class="brand-title">
+          <span>远行客 · 运营与用户管理后台</span>
+          <span class="cloud-pill" id="supabaseStatusPill">
+            <i data-lucide="database" style="width:12px;height:12px;"></i>
+            <span id="supabaseStatusText">Supabase 同步就绪</span>
+          </span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="btn" onclick="reloadAllAdminData()">
+          <i data-lucide="refresh-cw" style="width:13.5px;height:13.5px;"></i> 刷新数据
+        </button>
+        <a href="/inbound" class="btn">
+          <i data-lucide="globe" style="width:13.5px;height:13.5px;"></i> 入境游工作台 (/inbound)
+        </a>
+        <a href="/" class="btn primary">
+          <i data-lucide="message-square" style="width:13.5px;height:13.5px;"></i> 返回对话前台
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Top KPI Row -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-lbl"><span>注册用户总数</span><i data-lucide="users" style="width:14px;height:14px;color:var(--accent);"></i></div>
+        <div class="kpi-val" id="kpiTotalUsers">-</div>
+        <div class="kpi-sub">含个人出行画像与标签</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-lbl"><span>VIP / 管理账号</span><i data-lucide="crown" style="width:14px;height:14px;color:var(--accent);"></i></div>
+        <div class="kpi-val" id="kpiVipUsers">-</div>
+        <div class="kpi-sub">高净值商旅与后台权限</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-lbl"><span>累计智能查票/规划</span><i data-lucide="activity" style="width:14px;height:14px;color:var(--green);"></i></div>
+        <div class="kpi-val" id="kpiTotalSearches">-</div>
+        <div class="kpi-sub">自动沉淀常用目的地画像</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-lbl"><span>用户收藏行程单</span><i data-lucide="bookmark" style="width:14px;height:14px;color:var(--accent);"></i></div>
+        <div class="kpi-val" id="kpiSavedTrips">-</div>
+        <div class="kpi-sub">可转化预订与导出日历</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-lbl"><span>推荐词累计点击</span><i data-lucide="MousePointerClick" style="width:14px;height:14px;color:var(--green);"></i></div>
+        <div class="kpi-val" id="kpiPromptClicks">-</div>
+        <div class="kpi-sub">底部滚动智能提示词触发</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-lbl"><span>工具平均响应耗时</span><i data-lucide="zap" style="width:14px;height:14px;color:var(--accent);"></i></div>
+        <div class="kpi-val" id="kpiAvgLatency">-</div>
+        <div class="kpi-sub">并发空铁/酒店/地图引擎</div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" onclick="switchTab('users', this)">
+        <i data-lucide="users" style="width:14px;height:14px;"></i> 用户与出行画像管理
+      </button>
+      <button class="nav-tab" onclick="switchTab('prompts', this)">
+        <i data-lucide="sparkles" style="width:14px;height:14px;"></i> 智能滚动推荐词库
+      </button>
+      <button class="nav-tab" onclick="switchTab('logs', this)">
+        <i data-lucide="terminal" style="width:14px;height:14px;"></i> 实时查询与审计日志
+      </button>
+      <button class="nav-tab" onclick="switchTab('trips', this)">
+        <i data-lucide="map" style="width:14px;height:14px;"></i> 收藏行程与订单线索
+      </button>
+      <button class="nav-tab" onclick="switchTab('settings', this)">
+        <i data-lucide="settings" style="width:14px;height:14px;"></i> 系统、联盟与 Supabase 配置
+      </button>
+    </nav>
+
+    <!-- Panel 1: Users & Personas -->
+    <section class="panel active" id="panel-users">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">
+            <i data-lucide="user-plus" style="width:16px;height:16px;color:var(--accent);"></i>
+            <span>新增 / 编辑用户与个性化出行画像</span>
+          </div>
+          <span style="font-size:12px;color:var(--text-secondary);">修改用户的「常驻出发城市」或「交通/酒店偏好」后，该用户在前台底部的滚动推荐词将自动按新画像生成</span>
+        </div>
+        <div class="form-grid">
+          <input type="hidden" id="editUserId" value="" />
+          <div class="field">
+            <label>邮箱账号 *</label>
+            <input type="email" id="uEmail" class="input" placeholder="user@example.com" />
+          </div>
+          <div class="field">
+            <label>用户昵称 *</label>
+            <input type="text" id="uNickname" class="input" placeholder="如：张远航" />
+          </div>
+          <div class="field">
+            <label>登录密码（编辑时留空则不改）</label>
+            <input type="text" id="uPassword" class="input" placeholder="默认 123456" />
+          </div>
+          <div class="field">
+            <label>常驻出发城市 (home_city)</label>
+            <input type="text" id="uHomeCity" class="input" placeholder="如：杭州 / 上海 / 深圳" value="杭州" />
+          </div>
+          <div class="field">
+            <label>角色权限 (role)</label>
+            <select id="uRole" class="select">
+              <option value="user">普通用户 (user)</option>
+              <option value="vip">VIP 商旅会员 (vip)</option>
+              <option value="admin">总控管理员 (admin)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>交通方式偏好</label>
+            <select id="uTransport" class="select">
+              <option value="all">综合智能推荐 (all)</option>
+              <option value="train">高铁/动车优先 (train)</option>
+              <option value="flight">机票直飞优先 (flight)</option>
+              <option value="transfer">空铁联运优先 (transfer)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>酒店预算档位</label>
+            <select id="uBudget" class="select">
+              <option value="economy">经济高性价比 (economy)</option>
+              <option value="comfort" selected>舒适高分商圈 (comfort)</option>
+              <option value="luxury">五星豪华地标 (luxury)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>常去目的地（逗号分隔）</label>
+            <input type="text" id="uDests" class="input" placeholder="上海, 北京, 河内" value="上海, 北京, 河内" />
+          </div>
+          <div class="field">
+            <label>出行偏好标签（逗号分隔）</label>
+            <input type="text" id="uTags" class="input" placeholder="高铁控, 东南亚出差, 顺路游览" value="高铁出行, 高分酒店, 顺路游览" />
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <span id="userFormMsg" style="font-size:12px;color:var(--green);"></span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn" onclick="resetUserForm()">重置表单</button>
+            <button class="btn primary" onclick="saveUserForm()">
+              <i data-lucide="check" style="width:14px;height:14px;"></i> 保存用户画像
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">
+            <i data-lucide="users" style="width:16px;height:16px;color:var(--accent);"></i>
+            <span>全量注册用户与画像列表</span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>用户 / 邮箱</th>
+                <th>角色</th>
+                <th>常驻出发地</th>
+                <th>交通 & 酒店偏好</th>
+                <th>常去目的地</th>
+                <th>个人画像标签</th>
+                <th>查询数</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Panel 2: Smart Prompt Recommendation Templates -->
+    <section class="panel" id="panel-prompts">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">
+            <i data-lucide="sparkles" style="width:16px;height:16px;color:var(--accent);"></i>
+            <span>智能推荐提示词模板配置（支持用户画像变量动态插值）</span>
+          </div>
+          <span style="font-size:12px;color:var(--text-secondary);">
+            可用动态变量：<code>{home_city}</code> 常驻出发地、<code>{dest_city}</code> 常去国内城市、<code>{intl_city}</code> 常去国际城市、<code>{day_label}</code> 智能日期、<code>{hotel_style}</code> 酒店偏好档位
+          </span>
+        </div>
+        <div class="form-grid">
+          <input type="hidden" id="pId" value="" />
+          <div class="field">
+            <label>胶囊按钮短标题（支持变量）*</label>
+            <input type="text" id="pTitle" class="input" placeholder="如：{day_label}{home_city}去{dest_city}高铁余票" />
+          </div>
+          <div class="field">
+            <label>点击后发送的完整指令（支持变量）*</label>
+            <input type="text" id="pPrompt" class="input" placeholder="如：{day_label}上午从{home_city}到{dest_city}有哪些高铁？" />
+          </div>
+          <div class="field">
+            <label>图标名称</label>
+            <select id="pIcon" class="select">
+              <option value="train-front">高铁 (train-front)</option>
+              <option value="plane">飞机 (plane)</option>
+              <option value="git-branch">空铁中转 (git-branch)</option>
+              <option value="building-2">酒店 (building-2)</option>
+              <option value="compass">顺路游览 (compass)</option>
+              <option value="scale">比价 (scale)</option>
+              <option value="globe">全球/跨境 (globe)</option>
+              <option value="sparkles">智能星标 (sparkles)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>定向交通偏好</label>
+            <select id="pTransport" class="select">
+              <option value="all">全部用户 (all)</option>
+              <option value="train">偏好高铁用户加权 (train)</option>
+              <option value="flight">偏好机票用户加权 (flight)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>匹配画像标签加权（逗号分隔）</label>
+            <input type="text" id="pTags" class="input" placeholder="高铁控, 东南亚出差, 周末特种兵" />
+          </div>
+          <div class="field">
+            <label>基础权重优先级 (越大越靠前)</label>
+            <input type="number" id="pPriority" class="input" value="100" />
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span id="promptFormMsg" style="font-size:12px;color:var(--green);"></span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn" onclick="resetPromptForm()">清空</button>
+            <button class="btn primary" onclick="savePromptForm()">保存推荐词模板</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title"><span>当前推荐模板池与点击热度</span></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>胶囊显示标题模板</th>
+                <th>实际发送 Prompt 模板</th>
+                <th>定向交通</th>
+                <th>匹配标签</th>
+                <th>优先级</th>
+                <th>累计点击</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="promptsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Panel 3: Search & AI Audit Logs -->
+    <section class="panel" id="panel-logs">
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title"><i data-lucide="Flame" style="width:15px;height:15px;color:var(--accent);"></i> 热门目的地 Top 排行</div>
+          <div id="topDestBox" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i data-lucide="map-pin" style="width:15px;height:15px;color:var(--green);"></i> 用户常驻出发城市分布</div>
+          <div id="topHomeBox" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">
+            <i data-lucide="terminal" style="width:16px;height:16px;color:var(--accent);"></i>
+            <span>实时自然语言查询与工具调用审计流</span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>用户账号</th>
+                <th>自然语言提问</th>
+                <th>解析路线 / 日期</th>
+                <th>命中结果 (铁/机/酒/景)</th>
+                <th>引擎耗时</th>
+              </tr>
+            </thead>
+            <tbody id="logsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Panel 4: Saved Trips & Leads -->
+    <section class="panel" id="panel-trips">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">
+            <i data-lucide="bookmark-check" style="width:16px;height:16px;color:var(--accent);"></i>
+            <span>用户收藏行程单与商旅意向单管理</span>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>创建时间</th>
+                <th>所属用户</th>
+                <th>行程标题</th>
+                <th>出发 ➔ 目的</th>
+                <th>出行日期 / 天数</th>
+                <th>AI 摘要</th>
+                <th>状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="tripsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Panel 5: Cloud & System Settings -->
+    <section class="panel" id="panel-settings">
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">
+            <i data-lucide="cloud" style="width:16px;height:16px;color:var(--green);"></i>
+            <span>Supabase 云数据库 & 商业化配置中心</span>
+          </div>
+        </div>
+        <div id="supabaseDetailBox" style="background:var(--green-soft);color:var(--green);padding:12px 14px;border-radius:12px;font-size:12.5px;font-weight:600;"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>配置项 Key</th>
+                <th>当前值 Value</th>
+                <th>说明 Description</th>
+              </tr>
+            </thead>
+            <tbody id="settingsTableBody"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span id="settingsSaveMsg" style="font-size:12px;color:var(--green);"></span>
+          <button class="btn primary" onclick="saveAllSettings()">
+            <i data-lucide="save" style="width:14px;height:14px;"></i> 保存系统配置
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let allUsers = [];
+    let allPrompts = [];
+
+    function esc(str) {
+      return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function switchTab(name, btn) {
+      document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      const target = document.getElementById(`panel-${name}`);
+      if (target) target.classList.add('active');
+    }
+
+    async function loadOverview() {
+      const resp = await fetch('/api/admin/overview');
+      const data = await resp.json();
+      if (!data.ok) return;
+      const k = data.kpis || {};
+      document.getElementById('kpiTotalUsers').textContent = k.total_users ?? 0;
+      document.getElementById('kpiVipUsers').textContent = k.vip_users ?? 0;
+      document.getElementById('kpiTotalSearches').textContent = k.total_searches ?? 0;
+      document.getElementById('kpiSavedTrips').textContent = k.total_saved_trips ?? 0;
+      document.getElementById('kpiPromptClicks').textContent = k.total_prompt_clicks ?? 0;
+      document.getElementById('kpiAvgLatency').textContent = `${k.avg_latency_ms ?? 320}ms`;
+
+      const sb = data.supabase || {};
+      const sbText = document.getElementById('supabaseStatusText');
+      const sbBox = document.getElementById('supabaseDetailBox');
+      if (sb.connected) {
+        sbText.textContent = `Supabase Cloud 已连接 (${sb.project_ref})`;
+        sbBox.innerHTML = `✅ <strong>Supabase PostgreSQL 云数据库实时同步正常</strong> · Project Ref: <code>${esc(sb.project_ref)}</code> · Endpoint: <code>${esc(sb.url)}</code>`;
+      } else {
+        sbText.textContent = `本地 SQLite 主备引擎 (${sb.project_ref})`;
+        sbBox.innerHTML = `⚡ <strong>本地 SQLite 引擎 + Supabase Cloud (${esc(sb.project_ref)}) 双擎架构</strong> · Endpoint: <code>${esc(sb.url)}</code> · 状态: ${esc(sb.detail)}`;
+      }
+
+      document.getElementById('topDestBox').innerHTML = (data.top_destinations || []).map(d =>
+        `<span class="tag vip" style="font-size:12px;padding:5px 12px;">🔥 ${esc(d.city)} (${d.count} 次)</span>`
+      ).join('') || '<span style="font-size:12px;color:var(--text-muted);">暂无统计</span>';
+
+      document.getElementById('topHomeBox').innerHTML = (data.top_home_cities || []).map(d =>
+        `<span class="tag user" style="font-size:12px;padding:5px 12px;">📍 ${esc(d.city)} (${d.count} 人)</span>`
+      ).join('') || '<span style="font-size:12px;color:var(--text-muted);">暂无统计</span>';
+    }
+
+    async function loadUsers() {
+      const resp = await fetch('/api/admin/users');
+      const data = await resp.json();
+      allUsers = data.users || [];
+      const tbody = document.getElementById('usersTableBody');
+      tbody.innerHTML = allUsers.map(u => `
+        <tr>
+          <td>
+            <div><strong>${esc(u.nickname)}</strong></div>
+            <div style="font-size:11px;color:var(--text-muted);">${esc(u.email)}</div>
+          </td>
+          <td><span class="tag ${esc(u.role)}">${esc(u.role.toUpperCase())}</span></td>
+          <td><strong>📍 ${esc(u.home_city)}</strong></td>
+          <td>
+            <span class="tag">${esc(u.preferred_transport)}</span>
+            <span class="tag">${esc(u.hotel_budget)}</span>
+          </td>
+          <td>${(u.frequent_destinations || []).map(c => `<span class="tag">${esc(c)}</span>`).join('')}</td>
+          <td>${(u.travel_tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join('')}</td>
+          <td style="font-family:var(--font-mono);font-weight:700;">${u.search_count || 0}</td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              <button class="btn sm" onclick="editUser('${esc(u.id)}')">编辑画像</button>
+              <button class="btn sm" onclick="removeUser('${esc(u.id)}')">删除</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function editUser(uid) {
+      const u = allUsers.find(x => x.id === uid);
+      if (!u) return;
+      document.getElementById('editUserId').value = u.id;
+      document.getElementById('uEmail').value = u.email || '';
+      document.getElementById('uNickname').value = u.nickname || '';
+      document.getElementById('uPassword').value = '';
+      document.getElementById('uHomeCity').value = u.home_city || '杭州';
+      document.getElementById('uRole').value = u.role || 'user';
+      document.getElementById('uTransport').value = u.preferred_transport || 'all';
+      document.getElementById('uBudget').value = u.hotel_budget || 'comfort';
+      document.getElementById('uDests').value = (u.frequent_destinations || []).join(', ');
+      document.getElementById('uTags').value = (u.travel_tags || []).join(', ');
+      document.getElementById('userFormMsg').textContent = `正在编辑用户：${u.email}`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetUserForm() {
+      document.getElementById('editUserId').value = '';
+      document.getElementById('uEmail').value = '';
+      document.getElementById('uNickname').value = '';
+      document.getElementById('uPassword').value = '';
+      document.getElementById('uHomeCity').value = '杭州';
+      document.getElementById('uRole').value = 'user';
+      document.getElementById('uTransport').value = 'all';
+      document.getElementById('uBudget').value = 'comfort';
+      document.getElementById('uDests').value = '上海, 北京, 河内';
+      document.getElementById('uTags').value = '高铁出行, 高分酒店, 顺路游览';
+      document.getElementById('userFormMsg').textContent = '';
+    }
+
+    async function saveUserForm() {
+      const uid = document.getElementById('editUserId').value.trim();
+      const payload = {
+        email: document.getElementById('uEmail').value.trim(),
+        nickname: document.getElementById('uNickname').value.trim(),
+        password: document.getElementById('uPassword').value.trim(),
+        home_city: document.getElementById('uHomeCity').value.trim() || '杭州',
+        role: document.getElementById('uRole').value,
+        preferred_transport: document.getElementById('uTransport').value,
+        hotel_budget: document.getElementById('uBudget').value,
+        frequent_destinations: document.getElementById('uDests').value,
+        travel_tags: document.getElementById('uTags').value
+      };
+      const url = uid ? `/api/admin/users/${uid}` : '/api/admin/users';
+      const method = uid ? 'PUT' : 'POST';
+      const resp = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json();
+      if (!data.ok) {
+        document.getElementById('userFormMsg').textContent = `❌ ${data.error || '保存失败'}`;
+        return;
+      }
+      resetUserForm();
+      document.getElementById('userFormMsg').textContent = '✅ 用户及出行画像已保存！';
+      await loadUsers();
+      await loadOverview();
+    }
+
+    async function removeUser(uid) {
+      await fetch(`/api/admin/users/${uid}`, { method: 'DELETE' });
+      await loadUsers();
+      await loadOverview();
+    }
+
+    async function loadPrompts() {
+      const resp = await fetch('/api/admin/prompts');
+      const data = await resp.json();
+      allPrompts = data.prompts || [];
+      const tbody = document.getElementById('promptsTableBody');
+      tbody.innerHTML = allPrompts.map(p => `
+        <tr>
+          <td><strong>${esc(p.title)}</strong></td>
+          <td style="color:var(--text-secondary);">${esc(p.prompt_text)}</td>
+          <td><span class="tag">${esc(p.target_transport)}</span></td>
+          <td>${(p.target_tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join('')}</td>
+          <td style="font-family:var(--font-mono);">${p.priority}</td>
+          <td style="font-family:var(--font-mono);font-weight:700;color:var(--accent);">${p.click_count || 0}</td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              <button class="btn sm" onclick="editPrompt('${esc(p.id)}')">编辑</button>
+              <button class="btn sm" onclick="removePrompt('${esc(p.id)}')">删除</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function editPrompt(pid) {
+      const p = allPrompts.find(x => x.id === pid);
+      if (!p) return;
+      document.getElementById('pId').value = p.id;
+      document.getElementById('pTitle').value = p.title || '';
+      document.getElementById('pPrompt').value = p.prompt_text || '';
+      document.getElementById('pIcon').value = p.icon || 'sparkles';
+      document.getElementById('pTransport').value = p.target_transport || 'all';
+      document.getElementById('pTags').value = (p.target_tags || []).join(', ');
+      document.getElementById('pPriority').value = p.priority || 100;
+      document.getElementById('promptFormMsg').textContent = `正在编辑模板：${p.title}`;
+    }
+
+    function resetPromptForm() {
+      document.getElementById('pId').value = '';
+      document.getElementById('pTitle').value = '';
+      document.getElementById('pPrompt').value = '';
+      document.getElementById('pTags').value = '';
+      document.getElementById('pPriority').value = '100';
+      document.getElementById('promptFormMsg').textContent = '';
+    }
+
+    async function savePromptForm() {
+      const payload = {
+        id: document.getElementById('pId').value.trim(),
+        title: document.getElementById('pTitle').value.trim(),
+        prompt_text: document.getElementById('pPrompt').value.trim(),
+        icon: document.getElementById('pIcon').value,
+        target_transport: document.getElementById('pTransport').value,
+        target_tags: document.getElementById('pTags').value,
+        priority: Number(document.getElementById('pPriority').value || 100),
+        is_active: true
+      };
+      await fetch('/api/admin/prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      resetPromptForm();
+      document.getElementById('promptFormMsg').textContent = '✅ 推荐模板已更新！';
+      await loadPrompts();
+    }
+
+    async function removePrompt(pid) {
+      await fetch(`/api/admin/prompts/${pid}`, { method: 'DELETE' });
+      await loadPrompts();
+    }
+
+    async function loadLogs() {
+      const resp = await fetch('/api/admin/logs');
+      const data = await resp.json();
+      const logs = data.logs || [];
+      document.getElementById('logsTableBody').innerHTML = logs.map(l => `
+        <tr>
+          <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc((l.created_at || '').slice(0, 19).replace('T', ' '))}</td>
+          <td><span class="tag">${esc(l.user_email || 'anonymous')}</span></td>
+          <td><strong>${esc(l.query_text)}</strong></td>
+          <td>${esc(l.from_city || '-')} ➔ ${esc(l.to_city || '-')} <span style="color:var(--text-muted);">(${esc(l.travel_date || '-')})</span></td>
+          <td style="font-family:var(--font-mono);font-size:11.5px;">
+            🚄${l.trains_count || 0} · ✈️${l.flights_count || 0} · 🏨${l.hotels_count || 0} · 🎫${l.attractions_count || 0}
+          </td>
+          <td style="font-family:var(--font-mono);color:var(--green);">${l.latency_ms || 0}ms</td>
+        </tr>
+      `).join('');
+    }
+
+    async function loadTrips() {
+      const resp = await fetch('/api/admin/trips');
+      const data = await resp.json();
+      const trips = data.trips || [];
+      document.getElementById('tripsTableBody').innerHTML = trips.map(t => `
+        <tr>
+          <td style="font-size:11px;color:var(--text-muted);white-space:nowrap;">${esc((t.created_at || '').slice(0, 16).replace('T', ' '))}</td>
+          <td><span class="tag">${esc(t.user_email || 'guest')}</span></td>
+          <td><strong>${esc(t.title)}</strong></td>
+          <td>${esc(t.from_city)} ➔ ${esc(t.to_city)}</td>
+          <td>${esc(t.travel_date || '-')} (${t.days || 3}天)</td>
+          <td style="max-width:280px;font-size:11.5px;color:var(--text-secondary);">${esc(t.summary)}</td>
+          <td>
+            <select class="select" style="padding:4px 8px;font-size:11.5px;" onchange="updateTripStatus('${esc(t.id)}', this.value)">
+              <option value="planned" ${t.status === 'planned' ? 'selected' : ''}>规划中 (planned)</option>
+              <option value="booked" ${t.status === 'booked' ? 'selected' : ''}>已预订 (booked)</option>
+              <option value="completed" ${t.status === 'completed' ? 'selected' : ''}>已完成 (completed)</option>
+            </select>
+          </td>
+          <td>
+            <button class="btn sm" onclick="removeTrip('${esc(t.id)}')">删除</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function updateTripStatus(tid, status) {
+      await fetch(`/api/admin/trips/${tid}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+    }
+
+    async function removeTrip(tid) {
+      await fetch(`/api/admin/trips/${tid}`, { method: 'DELETE' });
+      await loadTrips();
+      await loadOverview();
+    }
+
+    async function loadSettings() {
+      const resp = await fetch('/api/admin/settings');
+      const data = await resp.json();
+      const settings = data.settings || [];
+      document.getElementById('settingsTableBody').innerHTML = settings.map(s => `
+        <tr>
+          <td style="font-family:var(--font-mono);font-weight:700;">${esc(s.key)}</td>
+          <td>
+            <input type="text" class="input setting-input" data-key="${esc(s.key)}" value="${esc(s.value)}" style="width:100%;max-width:340px;" />
+          </td>
+          <td style="color:var(--text-secondary);">${esc(s.description)}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function saveAllSettings() {
+      const updates = {};
+      document.querySelectorAll('.setting-input').forEach(inp => {
+        updates[inp.dataset.key] = inp.value.trim();
+      });
+      await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      const msg = document.getElementById('settingsSaveMsg');
+      msg.textContent = '✅ 系统配置已保存并立即生效！';
+      setTimeout(() => { msg.textContent = ''; }, 3000);
+    }
+
+    async function reloadAllAdminData() {
+      await Promise.all([
+        loadOverview(),
+        loadUsers(),
+        loadPrompts(),
+        loadLogs(),
+        loadTrips(),
+        loadSettings()
+      ]);
+      if (window.lucide) lucide.createIcons();
+    }
+
+    reloadAllAdminData();
+  </script>
+</body>
+</html>
