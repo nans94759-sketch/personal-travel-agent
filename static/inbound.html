@@ -82,6 +82,28 @@
   .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
   .hidden{display:none}
   footer{margin-top:34px;color:var(--muted);font-size:12px;line-height:1.7}
+
+  @media (max-width: 680px) {
+    .wrap{padding:16px 14px 56px}
+    header{margin-bottom:14px}
+    .hero{padding:20px 18px;border-radius:14px;margin-bottom:16px}
+    .hero h1{font-size:22px}
+    .hero p{font-size:14px}
+    .card{padding:16px 14px;border-radius:12px;margin-bottom:14px}
+    .chips{gap:6px}
+    .chip{padding:7px 12px;font-size:13px}
+    .row{gap:10px}
+    .row .field{flex:1 1 calc(50% - 6px);min-width:120px}
+    .row .field.grow{flex:1 1 100%}
+    .row button.primary{width:100%;margin-top:4px}
+    .summary{gap:10px 18px}
+    .leg{grid-template-columns:1fr auto;gap:6px 10px;padding:10px 0}
+    .leg .m{grid-column:1 / -1}
+    .day .dh{flex-wrap:wrap;gap:6px 10px}
+    .day .dh a.hotel{margin-left:0}
+    .item{grid-template-columns:48px 12px 1fr;gap:8px}
+    .actions button,.actions a{flex:1 1 auto;text-align:center}
+  }
 </style>
 </head>
 <body>
