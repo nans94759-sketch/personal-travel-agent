@@ -1,0 +1,7 @@
+.git
+.cache
+__pycache__
+*.pyc
+data/*.db
+tests
+supabase/.temp
