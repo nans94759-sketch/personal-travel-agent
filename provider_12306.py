@@ -26,7 +26,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CACHE_DIR = os.path.join(BASE_DIR, ".cache")
-os.makedirs(CACHE_DIR, exist_ok=True)
+try:
+    os.makedirs(CACHE_DIR, exist_ok=True)
+except OSError:
+    CACHE_DIR = "/tmp/.cache"
+    os.makedirs(CACHE_DIR, exist_ok=True)
 STATION_CACHE_FILE = os.path.join(CACHE_DIR, "12306_stations.json")
 BUNDLED_STATION_FILE = os.path.join(BASE_DIR, "data", "12306_stations.json")
 
