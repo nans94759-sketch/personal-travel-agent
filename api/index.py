@@ -2,8 +2,9 @@
 Vercel Python Serverless Bridge for aiohttp Application (`server.py`)
 ---------------------------------------------------------------------
 Starts the aiohttp application (`create_app()`) on an internal loopback socket
-once per warm container and forwards all Vercel HTTP requests (`GET`, `POST`,
-`PUT`, `DELETE`) preserving headers, cookies, and status codes.
+once per warm container and forwards all Vercel HTTP requests (`GET`, `HEAD`,
+`POST`, `PUT`, `DELETE`) preserving original URL paths, query parameters,
+headers, cookies, and status codes.
 """
 
 import asyncio
@@ -12,8 +13,8 @@ import os
 import socket
 import sys
 import threading
-import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -63,10 +64,40 @@ def _ensure_loopback_server() -> int:
         return _LOOPBACK_PORT
 
 
+def _resolve_original_path(raw_path: str, headers: object) -> str:
+    """Reconstruct the original request path & query string before Vercel rewrite."""
+    parsed = urllib.parse.urlsplit(raw_path)
+    qs_pairs = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+    orig_path = None
+    remaining_pairs = []
+    for k, v in qs_pairs:
+        if k == "__path" and orig_path is None:
+            orig_path = v
+        else:
+            remaining_pairs.append((k, v))
+
+    if not orig_path:
+        # Fallback to x-matched-path or raw path if not rewritten via __path
+        matched = getattr(headers, "get", lambda _k: "")("x-matched-path") or ""
+        if matched and matched != "/api/index.py":
+            orig_path = matched
+        elif parsed.path == "/api/index.py":
+            orig_path = "/"
+        else:
+            orig_path = parsed.path
+
+    if not orig_path.startswith("/"):
+        orig_path = "/" + orig_path
+
+    new_qs = urllib.parse.urlencode(remaining_pairs)
+    return f"{orig_path}?{new_qs}" if new_qs else orig_path
+
+
 class handler(BaseHTTPRequestHandler):
-    def _proxy(self) -> None:
+    def _proxy(self, is_head: bool = False) -> None:
         port = _ensure_loopback_server()
-        target_url = f"http://127.0.0.1:{port}{self.path}"
+        real_path = _resolve_original_path(self.path, self.headers)
+        target_url = f"http://127.0.0.1:{port}{real_path}"
 
         content_len = int(self.headers.get("Content-Length", 0) or 0)
         body = self.rfile.read(content_len) if content_len > 0 else None
@@ -76,23 +107,25 @@ class handler(BaseHTTPRequestHandler):
             if k.lower() not in ("host", "content-length", "transfer-encoding"):
                 req_headers[k] = v
 
+        method = "GET" if is_head else self.command
         req = urllib.request.Request(
-            target_url, data=body, headers=req_headers, method=self.command
+            target_url, data=body, headers=req_headers, method=method
         )
         try:
             with urllib.request.urlopen(req, timeout=55) as resp:
                 status = resp.status
                 resp_headers = resp.headers
-                resp_body = resp.read()
+                resp_body = b"" if is_head else resp.read()
         except urllib.error.HTTPError as e:
             status = e.code
             resp_headers = e.headers
-            resp_body = e.read()
+            resp_body = b"" if is_head else e.read()
         except Exception as e:
             self.send_response(502)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.end_headers()
-            self.wfile.write(f'{{"ok":false,"error":"{str(e)}"}}'.encode("utf-8"))
+            if not is_head:
+                self.wfile.write(f'{{"ok":false,"error":"{str(e)}"}}'.encode("utf-8"))
             return
 
         self.send_response(status)
@@ -100,17 +133,20 @@ class handler(BaseHTTPRequestHandler):
             if hk.lower() not in ("transfer-encoding", "connection", "content-encoding"):
                 self.send_header(hk, hv)
         self.end_headers()
-        if resp_body:
+        if resp_body and not is_head:
             self.wfile.write(resp_body)
 
     def do_GET(self) -> None:
-        self._proxy()
+        self._proxy(is_head=False)
+
+    def do_HEAD(self) -> None:
+        self._proxy(is_head=True)
 
     def do_POST(self) -> None:
-        self._proxy()
+        self._proxy(is_head=False)
 
     def do_PUT(self) -> None:
-        self._proxy()
+        self._proxy(is_head=False)
 
     def do_DELETE(self) -> None:
-        self._proxy()
+        self._proxy(is_head=False)
